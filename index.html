@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTM Container Parser</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='3' fill='%23161d2e'/%3E%3Ccircle cx='8' cy='12' r='2.6' fill='%23c85311'/%3E%3Cpath d='M11 12h6' stroke='%239aa3b2' stroke-width='1.4'/%3E%3Ccircle cx='18' cy='12' r='1.6' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f4f5f2; --panel:#ffffff; --panel2:#fbfbfa;
+  --ink:#161d2e; --muted:#5a6372; --faint:#8b93a1;
+  --line:#dcdfe3; --line2:#eceef0; --trace:#a7afbc;
+  --acc:#1f4fd8; --acc-bg:#eef2fd;
+  --fire:#c85311; --fire-bg:#fdf0e7;
+  --hi:#b3261e; --hi-bg:#fbeae9;
+  --med:#9a6700; --med-bg:#fdf3dc;
+  --low:#5f6672; --low-bg:#eef0f2;
+  --ok:#1d7a4f; --ok-bg:#e7f4ec;
+  --code-bg:#12151c; --code-ink:#d7dce6;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --disp:"Space Grotesk","Segoe UI",system-ui,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:3px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto} *{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+a{color:var(--acc)}
+button{font:inherit;cursor:pointer}
+::selection{background:#f3ddca}
+
+/* ---------- masthead: specimen label ---------- */
+.masthead{background:var(--ink);color:#eef0f4;border-bottom:3px solid var(--fire)}
+.masthead-in{max-width:1180px;margin:0 auto;padding:18px 24px 16px;display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between}
+.brand{min-width:230px}
+.brand h1{font:700 21px/1.1 var(--disp);letter-spacing:.04em;margin:0;text-transform:uppercase}
+.brand h1 .dot{color:var(--fire)}
+.brand p{margin:5px 0 0;font:12px/1.4 var(--mono);color:#9aa3b2;letter-spacing:.02em}
+.stamp{display:none;align-items:center;gap:22px;flex-wrap:wrap}
+.stamp.on{display:flex}
+.stamp .cid{font:600 24px/1 var(--mono);letter-spacing:.06em;color:#fff}
+.stamp .cid small{display:block;font:500 10px/1 var(--mono);letter-spacing:.22em;color:#8b93a1;margin-bottom:5px;text-transform:uppercase}
+.stamp .meta{font:12px/1.7 var(--mono);color:#b6bdc9;border-left:1px solid #3a4356;padding-left:18px}
+.stamp .meta b{color:#fff;font-weight:500}
+.seal{width:66px;height:66px;border-radius:50%;border:2px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);transform:rotate(-6deg);flex:none}
+.seal b{font-size:23px;line-height:1;font-weight:600}
+.seal span{font-size:8.5px;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.seal.gA{color:#7fd6a4;border-color:#7fd6a4}.seal.gB{color:#b9d97f;border-color:#b9d97f}
+.seal.gC{color:#f0c674;border-color:#f0c674}.seal.gD{color:#f0a35e;border-color:#f0a35e}.seal.gE{color:#f28b82;border-color:#f28b82}
+
+.wrap{max-width:1180px;margin:0 auto;padding:22px 24px 80px}
+
+/* ---------- input panel ---------- */
+.intro{margin:6px 0 20px;max-width:760px}
+.intro h2{font:600 17px/1.35 var(--disp);margin:0 0 6px}
+.intro p{margin:0;color:var(--muted);font-size:13.5px}
+.input-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:16px}
+@media(max-width:860px){.input-grid{grid-template-columns:1fr}}
+.slot{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.slot h3{margin:0 0 3px;font:600 13px/1.3 var(--disp);letter-spacing:.09em;text-transform:uppercase}
+.slot h3 .k{color:var(--fire);font-family:var(--mono);margin-right:8px}
+.slot .sub{font-size:12.5px;color:var(--muted);margin:0 0 13px}
+.field{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;font:13.5px var(--mono);color:var(--ink);background:var(--panel2)}
+.field:focus{outline:2px solid var(--acc);outline-offset:-1px;background:#fff}
+textarea.field{min-height:172px;resize:vertical;line-height:1.5}
+.row{display:flex;gap:10px;margin-top:11px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:var(--r);padding:8px 16px;font:600 13px var(--disp);letter-spacing:.04em}
+.btn:hover{background:#232c42}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--low-bg)}
+.btn.small{padding:5px 11px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,.chip:focus-visible,.tab:focus-visible{outline:2px solid var(--fire);outline-offset:2px}
+.status{font:12.5px var(--mono);margin-top:10px;color:var(--muted);white-space:pre-wrap}
+.status.err{color:var(--hi)}
+.status.ok{color:var(--ok)}
+.hintbox{display:none;margin-top:12px;border:1px dashed var(--trace);border-radius:var(--r);padding:11px 13px;font-size:13px;background:var(--panel2)}
+.hintbox.on{display:block}
+.hintbox ol{margin:6px 0 0;padding-left:19px}
+.hintbox li{margin:3px 0}
+.privacy{margin-top:14px;font:12px var(--mono);color:var(--faint)}
+.privacy b{color:var(--muted);font-weight:500}
+.parse-error{display:none;margin-top:16px;border:1px solid var(--hi);border-left:4px solid var(--hi);background:var(--hi-bg);border-radius:var(--r);padding:12px 15px;font-size:13.5px}
+.parse-error.on{display:block}
+
+/* ---------- toolbar + tabs ---------- */
+#workspace{display:none}
+#workspace.on{display:block}
+.toolbar{position:sticky;top:0;z-index:40;background:var(--paper);padding:10px 0 0;border-bottom:1px solid var(--line);margin-bottom:18px}
+.toolbar .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:10px}
+.search{flex:1;min-width:200px;max-width:420px;position:relative}
+.search input{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:7px 10px 7px 30px;font:13px var(--mono);background:var(--panel)}
+.search::before{content:"/";position:absolute;left:11px;top:6px;color:var(--faint);font:600 13px var(--mono)}
+.spacer{flex:1}
+.tabs{display:flex;gap:2px;flex-wrap:wrap}
+.tab{border:1px solid var(--line);border-bottom:none;background:var(--panel2);color:var(--muted);padding:7px 14px 6px;border-radius:var(--r) var(--r) 0 0;font:600 12.5px var(--disp);letter-spacing:.05em;text-transform:uppercase;position:relative}
+.tab .n{font:500 11px var(--mono);color:var(--faint);margin-left:6px}
+.tab.on{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--fire)}
+.tab .n.bad{color:var(--hi);font-weight:600}
+.view{display:none}
+.view.on{display:block}
+.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:0 0 14px;font:12.5px var(--mono);color:var(--muted)}
+.controls select{border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;font:12.5px var(--mono);background:var(--panel)}
+.controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.count-note{margin-left:auto;color:var(--faint)}
+
+/* ---------- overview ---------- */
+.ov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+@media(max-width:900px){.ov-grid{grid-template-columns:repeat(2,1fr)}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.tile .v{font:600 30px/1 var(--mono);letter-spacing:-.01em}
+.tile .l{font:500 10.5px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-top:7px}
+.panelbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:16px}
+.panelbox h3{margin:0 0 12px;font:600 12px var(--disp);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+.bars .bar-row{display:grid;grid-template-columns:190px 1fr 40px;gap:10px;align-items:center;margin:6px 0;font:12.5px var(--mono)}
+.bars .bar-row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bars .trk{height:9px;background:var(--line2);border-radius:2px;overflow:hidden}
+.bars .fil{height:100%;background:var(--ink)}
+.bars .ct{text-align:right;color:var(--muted)}
+.chipflow{display:flex;flex-wrap:wrap;gap:7px}
+.notelist{margin:0;padding-left:18px;font-size:13px;color:var(--muted)}
+.notelist li{margin:4px 0}
+.consentline{font:13px var(--mono);margin-bottom:8px}
+.consentline b{font-weight:600}
+
+/* ---------- cards ---------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.card.sys{border-style:dashed;opacity:.85}
+.card-h{display:flex;align-items:center;gap:11px;padding:11px 15px;cursor:pointer;user-select:none;flex-wrap:wrap}
+.card-h:hover{background:var(--panel2)}
+.card .idx{font:500 11px var(--mono);color:var(--faint);min-width:38px}
+.card .nm{font:600 14px var(--disp);flex:1;min-width:180px}
+.card .nm .gen{color:var(--faint);font-weight:500;font-style:italic}
+.caret{font-family:var(--mono);color:var(--trace);transition:transform .15s;font-size:12px}
+.card.open .caret{transform:rotate(90deg)}
+.card-b{display:none;border-top:1px solid var(--line2);padding:15px 17px 17px;background:var(--panel2)}
+.card.open .card-b{display:block}
+@keyframes flashcard{0%{box-shadow:0 0 0 3px var(--fire)}100%{box-shadow:0 0 0 3px transparent}}
+.card.flash{animation:flashcard 1.6s ease-out}
+
+/* type + status badges */
+.tbadge{font:500 11px var(--mono);padding:2.5px 8px;border-radius:2px;border:1px solid transparent;letter-spacing:.02em;white-space:nowrap}
+.cat-google{background:#e8effc;color:#174ea6;border-color:#c8d9f5}
+.cat-ad{background:#f1eafd;color:#5b21b6;border-color:#ddccf7}
+.cat-analytics{background:#e2f4f1;color:#0f6b5f;border-color:#bfe5df}
+.cat-custom{background:var(--fire-bg);color:#9a3d0a;border-color:#f0cdb4}
+.cat-other{background:var(--low-bg);color:#464e5c;border-color:#d9dde3}
+.cat-system{background:transparent;color:var(--faint);border:1px dashed var(--trace)}
+.sbadge{font:600 10px var(--mono);letter-spacing:.08em;padding:2.5px 7px;border-radius:2px;text-transform:uppercase}
+.s-high{background:var(--hi-bg);color:var(--hi)}
+.s-med{background:var(--med-bg);color:var(--med)}
+.s-low{background:var(--low-bg);color:var(--low)}
+.s-info{background:var(--acc-bg);color:var(--acc)}
+.s-ok{background:var(--ok-bg);color:var(--ok)}
+.s-paused{background:#e9e2f7;color:#5b3fa8}
+
+/* chips + wiring (signature) */
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:2px;padding:3.5px 9px;font:500 12px var(--mono);color:var(--ink);max-width:340px}
+.chip .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;flex:none}
+.chip-trigger::before{background:var(--fire)}
+.chip-tag::before{background:var(--ink)}
+.chip-variable::before{background:var(--acc)}
+.chip-ghost{border-style:dashed;color:var(--hi)}
+.chip-ghost::before{background:var(--hi)}
+.wire{display:grid;grid-template-columns:118px 1fr;gap:8px;align-items:start;padding:7px 0;border-top:1px dotted var(--line2)}
+.wire:first-child{border-top:none}
+.wire .wl{font:600 10px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--faint);padding-top:6px;position:relative}
+.wire .wl::after{content:"";position:absolute;right:-2px;top:11px;width:14px;height:1px;background:var(--trace)}
+.wirechips{display:flex;flex-wrap:wrap;gap:7px 14px;position:relative;padding-left:10px}
+.wirechips .chip{position:relative}
+.wirechips .chip::after{content:"";position:absolute;left:-11px;top:50%;width:9px;height:1px;background:var(--trace)}
+.wirechips .none{font:12px var(--mono);color:var(--faint);padding:4px 0;font-style:italic}
+
+/* detail sections */
+.sect{margin-top:15px}
+.sect > h4{margin:0 0 8px;font:600 10.5px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.kv{width:100%;border-collapse:collapse;font:12.5px var(--mono)}
+.kv td{border-top:1px solid var(--line2);padding:5.5px 10px 5.5px 0;vertical-align:top}
+.kv td:first-child{color:var(--muted);width:218px;white-space:nowrap}
+.kv td:last-child{word-break:break-word;white-space:pre-wrap}
+.kv tr:first-child td{border-top:none}
+.condlist{margin:0;padding:0;list-style:none;font:12.5px var(--mono)}
+.condlist li{padding:5px 0;border-top:1px solid var(--line2)}
+.condlist li:first-child{border-top:none}
+.condlist .op{color:var(--fire);font-weight:600;margin:0 6px}
+.condlist .neg{color:var(--hi);font-weight:600;margin-right:6px}
+.flagline{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+
+/* code blocks */
+.codewrap{position:relative;margin-top:6px;border-radius:var(--r);overflow:hidden;border:1px solid #2a3040}
+.codewrap .codehead{display:flex;justify-content:space-between;align-items:center;background:#1a1f2a;color:#8b93a1;font:500 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:6px 12px}
+.codewrap .copy{background:transparent;border:1px solid #3a4356;color:#b6bdc9;border-radius:2px;font:500 10.5px var(--mono);padding:2.5px 9px;letter-spacing:.06em}
+.codewrap .copy:hover{color:#fff;border-color:#fff}
+pre.code{margin:0;background:var(--code-bg);color:var(--code-ink);padding:13px 15px;font:12.5px/1.62 var(--mono);overflow:auto;max-height:460px;tab-size:2}
+.tok-str{color:#a8d08f}.tok-cmt{color:#6b7488;font-style:italic}.tok-num{color:#e3a86d}.tok-kw{color:#7fb4f0}.tok-tag{color:#e08b8b}.tok-attr{color:#c8a5e8}
+
+/* ---------- audit ---------- */
+.healthbar{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.hscore{font:600 46px/1 var(--mono)}
+.hscore small{font-size:16px;color:var(--faint)}
+.htext{font-size:13px;color:var(--muted);max-width:520px}
+.issue{border:1px solid var(--line);border-left:4px solid;border-radius:var(--r);background:var(--panel);margin-bottom:10px;padding:13px 16px}
+.issue.high{border-left-color:var(--hi)}
+.issue.med{border-left-color:var(--med)}
+.issue.low{border-left-color:var(--low)}
+.issue.info{border-left-color:var(--acc)}
+.issue .ih{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
+.issue .ih b{font:600 14px var(--disp)}
+.issue p{margin:4px 0;font-size:13px;color:var(--muted)}
+.issue .rec{margin-top:8px;font-size:13px;padding:8px 11px;background:var(--panel2);border:1px dashed var(--line);border-radius:2px}
+.issue .rec::before{content:"FIX";font:600 9.5px var(--mono);letter-spacing:.16em;color:var(--fire);margin-right:9px}
+.issue .ents{margin-top:9px;display:flex;gap:7px;flex-wrap:wrap}
+.allclear{border:1px solid var(--ok);background:var(--ok-bg);color:var(--ok);border-radius:var(--r);padding:14px 16px;font:600 13.5px var(--disp)}
+
+.empty{padding:34px 10px;text-align:center;color:var(--faint);font:13px var(--mono)}
+footer.app{margin-top:44px;border-top:1px solid var(--line);padding-top:14px;font:11.5px var(--mono);color:var(--faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+@media print{.toolbar,.masthead,#inputPanel,footer.app{display:none!important}.card .card-b{display:block}.view{display:block!important}body{background:#fff}}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div class="masthead-in">
+    <div class="brand">
+      <h1>GTM Container Parser<span class="dot">_</span></h1>
+      <p>tags &middot; triggers &middot; variables &middot; consent &middot; audit</p>
+    </div>
+    <div class="stamp" id="stamp">
+      <div class="cid"><small>Container</small><span id="stampId">&mdash;</span></div>
+      <div class="meta" id="stampMeta"></div>
+      <div class="seal gC" id="stampSeal" title="Container health"><b>&ndash;</b><span>health</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ======================= INPUT ======================= -->
+<section id="inputPanel">
+  <div class="intro">
+    <h2>Decode any published Google Tag Manager container.</h2>
+    <p>Fetch a live container by ID, or paste the raw <code>gtm.js</code> source / a container export JSON. Everything is parsed locally in this page &mdash; nothing is uploaded anywhere.</p>
+  </div>
+  <div class="input-grid">
+    <div class="slot">
+      <h3><span class="k">01</span>Fetch by container ID</h3>
+      <p class="sub">Loads <span style="font-family:var(--mono)">googletagmanager.com/gtm.js?id=&hellip;</span> directly. If the browser blocks the cross-origin request, a fallback route appears below.</p>
+      <input class="field" id="cidInput" placeholder="GTM-XXXXXXX" spellcheck="false" autocomplete="off">
+      <div class="row">
+        <button class="btn" id="fetchBtn">Fetch &amp; parse</button>
+        <button class="btn ghost" id="demoBtn" title="Load a built-in sample container">Try demo container</button>
+      </div>
+      <div class="status" id="fetchStatus"></div>
+      <div class="hintbox" id="fetchHint">
+        <b>Manual route (30 seconds):</b>
+        <ol>
+          <li>Open <a id="hintUrl" href="#" target="_blank" rel="noopener">the gtm.js URL</a> in a new tab</li>
+          <li>Select all (<kbd>Ctrl/Cmd&nbsp;A</kbd>) and copy</li>
+          <li>Paste into the box on the right and hit <b>Parse</b></li>
+        </ol>
+      </div>
+    </div>
+    <div class="slot">
+      <h3><span class="k">02</span>Paste source or export</h3>
+      <p class="sub">Accepts raw <b>gtm.js</b> contents (auto-extracts the data object) or a <b>GTM container export</b> (Admin &rarr; Export Container). Format is auto-detected.</p>
+      <textarea class="field" id="pasteInput" placeholder='var data = {"resource":{"version":"&hellip;"  &mdash;or&mdash;  {"exportFormatVersion": 2, "containerVersion": {&hellip;' spellcheck="false"></textarea>
+      <div class="row">
+        <button class="btn" id="parseBtn">Parse</button>
+        <input type="file" id="fileInput" accept=".js,.json,.txt" style="display:none">
+        <button class="btn ghost" id="fileBtn">Load file&hellip;</button>
+        <input class="field" id="cidOptional" placeholder="Container ID (optional)" style="flex:1;min-width:150px;max-width:220px" spellcheck="false">
+      </div>
+      <div class="status" id="parseStatus"></div>
+    </div>
+  </div>
+  <div class="parse-error" id="parseError"></div>
+  <p class="privacy"><b>Privacy:</b> parsing happens 100% in your browser. No container data leaves this page. The optional CORS-relay fetch only ever touches the public gtm.js file.</p>
+</section>
+
+<!-- ======================= WORKSPACE ======================= -->
+<section id="workspace">
+  <div class="toolbar">
+    <div class="bar">
+      <button class="btn ghost small" id="resetBtn">&larr; New container</button>
+      <div class="search"><input id="q" placeholder="filter entities&hellip;  (press / to focus)" autocomplete="off"></div>
+      <div class="spacer"></div>
+      <button class="btn small" id="exportReportBtn" title="Standalone HTML audit report">Export audit (HTML)</button>
+      <button class="btn ghost small" id="exportCsvBtn">Tags CSV</button>
+      <button class="btn ghost small" id="exportJsonBtn">JSON</button>
+      <button class="btn ghost small" id="printBtn">Print</button>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab on" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="tags">Tags<span class="n" id="nTags"></span></button>
+      <button class="tab" data-tab="triggers">Triggers<span class="n" id="nTriggers"></span></button>
+      <button class="tab" data-tab="variables">Variables<span class="n" id="nVariables"></span></button>
+      <button class="tab" data-tab="audit">Audit<span class="n" id="nIssues"></span></button>
+    </nav>
+  </div>
+
+  <div class="view on" id="view-overview"></div>
+
+  <div class="view" id="view-tags">
+    <div class="controls">
+      <select id="tagTypeFilter"><option value="">All tag types</option></select>
+      <label><input type="checkbox" id="flaggedOnly"> flagged only</label>
+      <label><input type="checkbox" id="showSystem"> show system listeners (<span id="sysCount">0</span>)</label>
+      <span class="count-note" id="tagCount"></span>
+    </div>
+    <div id="tagList"></div>
+  </div>
+
+  <div class="view" id="view-triggers">
+    <div class="controls"><span class="count-note" id="trgCount"></span></div>
+    <div id="triggerList"></div>
+  </div>
+
+  <div class="view" id="view-variables">
+    <div class="controls">
+      <label><input type="checkbox" id="hideBuiltins"> hide built-ins</label>
+      <label><input type="checkbox" id="unusedOnly"> unused only</label>
+      <span class="count-note" id="varCount"></span>
+    </div>
+    <div id="variableList"></div>
+  </div>
+
+  <div class="view" id="view-audit"></div>
+</section>
+
+<footer class="app">
+  <span>GTM Container Parser &mdash; client-side diagnostic tool. Not affiliated with Google.</span>
+  <span id="footStamp"></span>
+</footer>
+</div>
+<script>
+'use strict';
+/* =====================================================================
+   GTM CONTAINER PARSER — application script
+   Sections: [1] maps  [2] utils  [3] compiled parser  [4] export parser
+             [5] cross-ref + vendors  [6] audit engine  [7] demo + self-test
+             [8] rendering  [9] exports  [10] wiring
+   Sections 1–7 are DOM-free (testable in Node).
+   ===================================================================== */
+
+/* ---------- [1] reference maps ---------- */
+const TAG_TYPES = {
+  html:['Custom HTML','custom'], img:['Custom Image','custom'],
+  googtag:['Google Tag','google'], gaawe:['GA4 Event','google'], gaawc:['GA4 Configuration','google'],
+  ua:['Universal Analytics (legacy)','google'], gas:['GA Settings (legacy)','google'],
+  awct:['Google Ads Conversion','ad'], sp:['Google Ads Remarketing','ad'],
+  flc:['Floodlight Counter','ad'], fls:['Floodlight Sales','ad'], gclidw:['Conversion Linker','ad'],
+  baut:['Microsoft Ads UET','ad'], bzi:['LinkedIn Insight (legacy)','ad'], pntr:['Pinterest Tag','ad'],
+  twitter_website_tag:['Twitter/X Pixel','ad'], asp:['AdRoll Smart Pixel','ad'],
+  cegg:['Crazy Egg','analytics'], hjtc:['Hotjar','analytics'],
+  opt:['Google Optimize (sunset)','google'], zone:['Zones','google'], awec:['User-Provided Data','google']
+};
+const SYSTEM_TAGS = {
+  cl:'Click Listener', lcl:'Link Click Listener', fsl:'Form Submit Listener', tl:'Timer Listener',
+  hl:'History Listener', jel:'JS Error Listener', sdl:'Scroll Depth Listener', ytl:'YouTube Video Listener',
+  evl:'Element Visibility Listener', tg:'Trigger Group Helper'
+};
+const VAR_TYPES = {
+  v:'Data Layer Variable', c:'Constant', jsm:'Custom JavaScript', j:'JavaScript Variable',
+  u:'URL', k:'1st-Party Cookie', f:'HTTP Referrer', e:'Custom Event', smm:'Lookup Table',
+  remm:'RegEx Table', aev:'Auto-Event Variable', gas:'GA Settings (legacy)', d:'DOM Element',
+  vis:'Element Visibility', r:'Random Number', cid:'Container ID', ctv:'Container Version',
+  dbg:'Debug Mode', uv:'Undefined Value', awec:'User-Provided Data',
+  gtes:'Google Tag: Event Settings', gtcs:'Google Tag: Config Settings'
+};
+const BUILTIN_VAR_FNS = ['e','cid','ctv','dbg','r','f','uv'];
+const EVENT_MAP = {
+  'gtm.js':'Page View','gtm.dom':'DOM Ready','gtm.load':'Window Loaded','gtm.init':'Initialization',
+  'gtm.init_consent':'Consent Initialization','gtm.click':'Click - All Elements',
+  'gtm.linkClick':'Click - Just Links','gtm.formSubmit':'Form Submission','gtm.timer':'Timer',
+  'gtm.scrollDepth':'Scroll Depth','gtm.video':'YouTube Video','gtm.historyChange':'History Change',
+  'gtm.pageError':'JavaScript Error','gtm.elementVisibility':'Element Visibility','gtm.triggerGroup':'Trigger Group'
+};
+const PRED_OPS = {
+  _eq:'equals', _cn:'contains', _sw:'starts with', _ew:'ends with', _re:'matches RegEx',
+  _gt:'greater than', _ge:'greater or equal', _lt:'less than', _le:'less or equal', _css:'matches CSS selector'
+};
+const EXPORT_OPS = {
+  EQUALS:'equals', CONTAINS:'contains', STARTS_WITH:'starts with', ENDS_WITH:'ends with',
+  MATCH_REGEX:'matches RegEx', GREATER:'greater than', GREATER_OR_EQUALS:'greater or equal',
+  LESS:'less than', LESS_OR_EQUALS:'less or equal', CSS_SELECTOR:'matches CSS selector', URL_MATCHES:'matches URL'
+};
+const EXPORT_TRIGGER_TYPES = {
+  PAGEVIEW:'Page View', DOM_READY:'DOM Ready', WINDOW_LOADED:'Window Loaded', CUSTOM_EVENT:'Custom Event',
+  CLICK:'Click - All Elements', LINK_CLICK:'Click - Just Links', FORM_SUBMISSION:'Form Submission',
+  HISTORY_CHANGE:'History Change', JS_ERROR:'JavaScript Error', TIMER:'Timer', SCROLL_DEPTH:'Scroll Depth',
+  YOU_TUBE_VIDEO:'YouTube Video', ELEMENT_VISIBILITY:'Element Visibility', TRIGGER_GROUP:'Trigger Group',
+  INIT:'Initialization', CONSENT_INIT:'Consent Initialization', ALWAYS:'Page View (legacy Always)'
+};
+const BUILTIN_TRIGGER_IDS = {
+  '2147479553':{name:'All Pages', type:'Page View'},
+  '2147479572':{name:'Consent Initialization - All Pages', type:'Consent Initialization'},
+  '2147479573':{name:'Initialization - All Pages', type:'Initialization'}
+};
+const MARKETING_TYPES = ['awct','sp','flc','fls','baut','bzi','pntr','twitter_website_tag','asp'];
+const VENDORS = [
+  [/connect\.facebook\.net|fbq\s*\(/i,'Meta Pixel'],
+  [/analytics\.tiktok\.com|ttq\./i,'TikTok Pixel'],
+  [/snap\.licdn\.com|_linkedin_partner_id/i,'LinkedIn Insight'],
+  [/sc-static\.net|snaptr\s*\(/i,'Snap Pixel'],
+  [/static\.ads-twitter\.com|twq\s*\(/i,'Twitter/X Pixel'],
+  [/bat\.bing\.com|\buetq\b/i,'Microsoft UET'],
+  [/quantserve\.com|quantcount|_qevents/i,'Quantcast'],
+  [/criteo/i,'Criteo'],
+  [/hotjar/i,'Hotjar'],
+  [/clarity\.ms/i,'Microsoft Clarity'],
+  [/googletagmanager\.com\/gtm\.js/i,'Nested GTM container'],
+  [/googletagmanager\.com\/gtag\/js/i,'gtag.js'],
+  [/doubleclick\.net/i,'DoubleClick / Floodlight'],
+  [/amplitude/i,'Amplitude'],
+  [/cdn\.segment\.com/i,'Segment'],
+  [/hs-scripts\.com|js\.hsforms/i,'HubSpot'],
+  [/pintrk|pinimg\.com/i,'Pinterest'],
+  [/outbrain/i,'Outbrain'],
+  [/taboola/i,'Taboola'],
+  [/dwin1\.com/i,'Awin'],
+  [/impactcdn|impactradius/i,'Impact'],
+  [/googleadservices|googlesyndication/i,'Google Ads']
+];
+const CONSENT_HELP = {
+  NEEDED:'Fires only when the listed consent types are granted',
+  NOT_NEEDED:'Explicitly declared as not requiring additional consent',
+  NOT_SET:'No additional consent configured on this tag'
+};
+
+/* ---------- [2] utils ---------- */
+function pushU(arr, v){ if(arr.indexOf(v)===-1) arr.push(v); }
+function prettyEnum(s){ return String(s||'').toLowerCase().replace(/_/g,' ').replace(/\b\w/g, function(c){return c.toUpperCase();}); }
+function trunc(s, n){ s=String(s==null?'':s); return s.length>n ? s.slice(0,n-1)+'\u2026' : s; }
+function tagTypeInfo(fn){
+  if(SYSTEM_TAGS[fn]) return {label:SYSTEM_TAGS[fn], cat:'system', system:true};
+  if(TAG_TYPES[fn]) return {label:TAG_TYPES[fn][0], cat:TAG_TYPES[fn][1], system:false};
+  if(fn.indexOf('cvt_')===0) return {label:'Custom Template Tag', cat:'custom', system:false};
+  return {label:fn, cat:'other', system:false};
+}
+function varTypeLabel(fn){
+  if(VAR_TYPES[fn]) return VAR_TYPES[fn];
+  if(fn.indexOf('cvt_')===0) return 'Custom Template Variable';
+  return fn;
+}
+/* Extract the `var data = {...}` object from raw gtm.js text (string-aware brace matcher). */
+function extractDataObject(text){
+  var marker = text.indexOf('var data =');
+  var start = marker>=0 ? text.indexOf('{', marker) : text.indexOf('{');
+  if(start<0) return null;
+  var depth=0, inStr=false, escNext=false;
+  for(var i=start;i<text.length;i++){
+    var ch=text[i];
+    if(inStr){
+      if(escNext){escNext=false;}
+      else if(ch==='\\'){escNext=true;}
+      else if(ch==='"'){inStr=false;}
+      continue;
+    }
+    if(ch==='"'){inStr=true;continue;}
+    if(ch==='{')depth++;
+    else if(ch==='}'){depth--;if(depth===0){return text.slice(start,i+1);}}
+  }
+  return null;
+}
+function guessContainerId(text){
+  var m = text.match(/GTM-[A-Z0-9]{4,10}/g);
+  if(!m) return null;
+  var counts={}; m.forEach(function(x){counts[x]=(counts[x]||0)+1;});
+  return Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];})[0];
+}
+
+/* ---------- [3] compiled gtm.js parser ---------- */
+function compiledVarName(m, i){
+  var fn = String(m['function']||'').replace(/^__/,'');
+  var p = function(k){ var v=m['vtp_'+k]; return typeof v==='string'?v:''; };
+  switch(fn){
+    case 'v': return 'DLV \u2014 '+(p('name')||'?');
+    case 'c': return 'Const \u2014 '+trunc(typeof m.vtp_value==='string'?m.vtp_value:JSON.stringify(m.vtp_value), 26);
+    case 'jsm': return 'Custom JS #'+i;
+    case 'j': return 'JS Global \u2014 '+(p('name')||'?');
+    case 'k': return 'Cookie \u2014 '+(p('name')||'?');
+    case 'u': {
+      var comp=p('component')||'URL';
+      var map={URL:'Page URL',PATH:'Page Path',HOST:'Page Hostname',PROTOCOL:'Protocol',PORT:'Port',FRAGMENT:'URL Fragment',EXTENSION:'URL Extension'};
+      if(comp==='QUERY') return 'Query \u2014 '+(p('queryKey')||'(any)');
+      return map[comp]||('URL \u2014 '+comp);
+    }
+    case 'f': return 'Referrer';
+    case 'e': return '_event (Event Name)';
+    case 'smm': return 'Lookup Table #'+i;
+    case 'remm': return 'RegEx Table #'+i;
+    case 'aev': return 'Auto-Event \u2014 '+(p('varType')||'?');
+    case 'gas': return 'GA Settings #'+i;
+    case 'd': return 'DOM Element \u2014 '+(p('elementId')||p('selector')||'#'+i);
+    case 'vis': return 'Element Visibility #'+i;
+    case 'r': return 'Random Number';
+    case 'cid': return 'Container ID';
+    case 'ctv': return 'Container Version';
+    case 'dbg': return 'Debug Mode';
+    case 'uv': return 'Undefined Value';
+    case 'awec': return 'User-Provided Data #'+i;
+    case 'gtes': return 'Event Settings #'+i;
+    case 'gtcs': return 'Config Settings #'+i;
+    default: return (fn.indexOf('cvt_')===0?'Template Var':fn)+' #'+i;
+  }
+}
+function renderCompiledValue(v, deps, nameOf, depth){
+  depth = depth||0;
+  if(depth>14) return '\u2026';
+  if(v===null||v===undefined) return '';
+  if(typeof v!=='object') return String(v);
+  if(!Array.isArray(v)) return JSON.stringify(v);
+  var op=v[0], parts, k;
+  if(op==='macro'){ if(deps) deps.add(v[1]); return '{{'+nameOf(v[1])+'}}'; }
+  if(op==='escape') return renderCompiledValue(v[1],deps,nameOf,depth+1);
+  if(op==='template'){ parts=''; for(k=1;k<v.length;k++) parts+=renderCompiledValue(v[k],deps,nameOf,depth+1); return parts; }
+  if(op==='list'){ parts=[]; for(k=1;k<v.length;k++) parts.push(renderCompiledValue(v[k],deps,nameOf,depth+1)); return '['+parts.join(', ')+']'; }
+  if(op==='map'){ parts=[]; for(k=1;k+1<v.length;k+=2) parts.push(renderCompiledValue(v[k],deps,nameOf,depth+1)+': '+renderCompiledValue(v[k+1],deps,nameOf,depth+1)); return '{'+parts.join(', ')+'}'; }
+  if(op==='tag') return '\u00abtag '+v[1]+'\u00bb';
+  if(op==='zb') return renderCompiledValue(v[1],deps,nameOf,depth+1);
+  return JSON.stringify(v);
+}
+function parseCompiled(res, rawText, providedId){
+  var macros=res.macros||[], tagsRaw=res.tags||[], preds=res.predicates||[], rules=res.rules||[];
+  var varNames = macros.map(compiledVarName);
+  var nameOf = function(i){ return varNames[i]!==undefined?varNames[i]:('macro_'+i); };
+  var rcv = function(v,deps){ return renderCompiledValue(v,deps,nameOf,0); };
+
+  /* variables */
+  var variables = macros.map(function(m,i){
+    var fn=String(m['function']||'').replace(/^__/,''), deps=new Set(), params=[], code=null, key;
+    for(key in m){
+      if(key.indexOf('vtp_')!==0) continue;
+      if(fn==='jsm' && key==='vtp_javascript'){
+        code={lang:'js', text: typeof m[key]==='string'?m[key]:rcv(m[key],deps)};
+        continue;
+      }
+      params.push({key:key.slice(4), val:rcv(m[key],deps)});
+    }
+    return {kind:'variable', id:'var-'+i, num:i, name:varNames[i], generatedName:true,
+      rawType:fn, typeLabel:varTypeLabel(fn), builtIn:BUILTIN_VAR_FNS.indexOf(fn)>=0,
+      params:params, code:code, varRefs:Array.from(deps).map(function(x){return 'var-'+x;}),
+      usedByTags:[], usedByTriggers:[], usedByVars:[], flags:[]};
+  });
+
+  /* tags */
+  var tags = tagsRaw.map(function(t,i){
+    var fn=String(t['function']||'').replace(/^__/,'');
+    var info=tagTypeInfo(fn), deps=new Set(), params=[], code=null, name=null, key;
+    if(Array.isArray(t.metadata) && t.metadata[0]==='map'){
+      for(var mi=1; mi+1<t.metadata.length; mi+=2){ if(t.metadata[mi]==='name'){ name=String(t.metadata[mi+1]); } }
+    }
+    for(key in t){
+      if(key.indexOf('vtp_')!==0) continue;
+      var raw=t[key];
+      if(fn==='html' && key==='vtp_html'){
+        code={lang:'html', text: typeof raw==='string'?raw:rcv(raw,deps)};
+        if(typeof raw!=='string') rcv(raw,deps);
+        continue;
+      }
+      params.push({key:key.slice(4), val:rcv(raw,deps)});
+    }
+    var setup=[], teardown=[];
+    var seq=function(list, out){
+      if(Array.isArray(list) && list[0]==='list'){
+        for(var s=1;s<list.length;s++){ var it=list[s]; if(Array.isArray(it)&&it[0]==='tag') out.push({idx:it[1], opt:it[2]}); }
+      }
+    };
+    seq(t.setup_tags, setup); seq(t.teardown_tags, teardown);
+    var consentTypes=[], consentStatus='NOT_SET';
+    if(Array.isArray(t.consent) && t.consent[0]==='list'){
+      consentTypes=t.consent.slice(1).map(String); consentStatus = consentTypes.length?'NEEDED':'NOT_NEEDED';
+    }
+    var firingOption = t.once_per_event ? 'Once per event' : (t.once_per_load ? 'Once per page' : 'Unlimited');
+    return {kind:'tag', id:'tag-'+i, num:i, name:name||null, generatedName:!name,
+      rawType:fn, typeLabel:info.label, category:info.cat, system:info.system,
+      params:params, code:code, firing:[], blocking:[],
+      consent:{status:consentStatus, types:consentTypes},
+      advanced:{firingOption:firingOption, priority:(t.priority!==undefined?rcv(t.priority,deps):null),
+        setup:setup, teardown:teardown, paused:false, liveOnly:!!t.live_only,
+        notes:null, folder:null, tagId:(t.tag_id!==undefined?String(t.tag_id):null)},
+      vendor:[], varRefs:Array.from(deps).map(function(x){return 'var-'+x;}), flags:[]};
+  });
+  tags.forEach(function(t){
+    if(!t.name){
+      var hint = t.advanced.tagId ? 'Tag '+t.advanced.tagId : 'Tag #'+t.num;
+      t.name = hint+' \u00b7 '+t.typeLabel;
+    }
+    t.advanced.setup = t.advanced.setup.map(function(s){ return {id:'tag-'+s.idx, name:(tags[s.idx]?null:'tag '+s.idx), opt:s.opt}; });
+    t.advanced.teardown = t.advanced.teardown.map(function(s){ return {id:'tag-'+s.idx, name:(tags[s.idx]?null:'tag '+s.idx), opt:s.opt}; });
+  });
+
+  /* rules -> synthesized triggers */
+  var isEventMacro=function(arg){ return Array.isArray(arg)&&arg[0]==='macro'&&macros[arg[1]]&&String(macros[arg[1]]['function']).replace(/^__/,'')==='e'; };
+  var triggers=[], sigMap={};
+  rules.forEach(function(rule){
+    if(!Array.isArray(rule)) return;
+    var ifs=[], unless=[], adds=[], blocks=[];
+    rule.forEach(function(opArr){
+      if(!Array.isArray(opArr)) return;
+      var o=opArr[0], args=opArr.slice(1);
+      if(o==='if') ifs=ifs.concat(args);
+      else if(o==='unless') unless=unless.concat(args);
+      else if(o==='add') adds=adds.concat(args);
+      else if(o==='block') blocks=blocks.concat(args);
+    });
+    var sig=JSON.stringify([ifs.slice().sort(function(a,b){return a-b;}), unless.slice().sort(function(a,b){return a-b;})]);
+    var trg=sigMap[sig];
+    if(!trg){
+      var deps=new Set(), conditions=[], typeLabel=null, eventName=null;
+      var handlePred=function(pi, negate){
+        var pr=preds[pi]; if(!pr) return;
+        var fnp=pr['function'];
+        if(!negate && !eventName && fnp==='_eq' && isEventMacro(pr.arg0) && typeof pr.arg1==='string'){
+          eventName=pr.arg1;
+          typeLabel=EVENT_MAP[eventName]|| null;
+          if(typeLabel) return;            /* implicit event predicate — matches GTM UI */
+          typeLabel='Custom Event';
+          conditions.push({left:'event', op:'equals', right:eventName, negate:false});
+          return;
+        }
+        if(!negate && !eventName && fnp==='_re' && isEventMacro(pr.arg0) && typeof pr.arg1==='string'){
+          eventName=pr.arg1; typeLabel='Custom Event (RegEx)';
+          conditions.push({left:'event', op:'matches RegEx', right:eventName, negate:false});
+          return;
+        }
+        conditions.push({left:rcv(pr.arg0,deps), op:PRED_OPS[fnp]||fnp, right:(pr.arg1!==undefined?rcv(pr.arg1,deps):''), negate:!!negate});
+      };
+      ifs.forEach(function(pi){handlePred(pi,false);});
+      unless.forEach(function(pi){handlePred(pi,true);});
+      if(!typeLabel) typeLabel = conditions.length ? 'Conditions (any event)' : 'All Events';
+      var condSumm = conditions.length ? conditions[0].left+' '+conditions[0].op+' '+trunc(conditions[0].right,26) : '';
+      var name = typeLabel + (typeLabel.indexOf('Custom Event')===0 && eventName ? ' \u2014 '+trunc(eventName,34)
+                : (condSumm ? ' \u2014 '+trunc(condSumm,52) : ''));
+      trg={kind:'trigger', id:'trg-'+triggers.length, num:triggers.length, name:name, generatedName:true,
+        typeLabel:typeLabel, eventName:eventName, conditions:conditions, settings:[],
+        fires:[], blocks:[], varRefs:Array.from(deps).map(function(x){return 'var-'+x;}), flags:[], builtIn:false};
+      sigMap[sig]=trg; triggers.push(trg);
+    }
+    adds.forEach(function(ti){ pushU(trg.fires,'tag-'+ti); if(tags[ti]) pushU(tags[ti].firing, trg.id); });
+    blocks.forEach(function(ti){ pushU(trg.blocks,'tag-'+ti); if(tags[ti]) pushU(tags[ti].blocking, trg.id); });
+  });
+
+  return {source:'compiled', sourceLabel:'Compiled gtm.js',
+    containerId:providedId||guessContainerId(rawText||'')||'(unknown)',
+    version:String(res.version||'?'), containerName:null, fingerprintDate:null,
+    tags:tags, triggers:triggers, variables:variables, issues:[],
+    notes:['Parsed from the public compiled script: variable names and unnamed tag/trigger labels are reconstructed \u2014 gtm.js does not expose GTM display names.',
+           'Paused tags, folders and workspace notes are not present in compiled output. For those, parse a container export (Admin \u2192 Export Container).']};
+}
+
+/* ---------- [4] container-export parser ---------- */
+function pv(p){
+  if(p===null||p===undefined) return '';
+  if(typeof p!=='object') return String(p);
+  if(p.type==='LIST') return '['+(p.list||[]).map(pv).join(', ')+']';
+  if(p.type==='MAP') return '{'+(p.map||[]).map(function(m){return (m.key?m.key+': ':'')+pv(m);}).join(', ')+'}';
+  if(p.type==='TAG_REFERENCE') return 'Tag: '+p.value;
+  if(p.type==='TRIGGER_REFERENCE') return 'Trigger: '+p.value;
+  return String(p.value!==undefined?p.value:'');
+}
+function scanRefs(str, out){
+  var re=/\{\{([^{}]+)\}\}/g, m;
+  while((m=re.exec(String(str)))!==null){ out.add(m[1].trim()); }
+}
+function parseExport(root, providedId){
+  var cv = root.containerVersion || root;
+  var cont = cv.container || {};
+  var folders = {};
+  (cv.folder||[]).forEach(function(f){ folders[String(f.folderId)] = f.name; });
+
+  var variables=[], tags=[], triggers=[];
+  var varByName={};   /* lowercase name -> entity */
+  var addVar=function(e){ variables.push(e); varByName[e.name.toLowerCase()]=e; return e; };
+
+  (cv.builtInVariable||[]).forEach(function(b,i){
+    addVar({kind:'variable', id:'var-b'+i, num:'B'+i, name:b.name||prettyEnum(b.type), generatedName:false,
+      rawType:String(b.type||'').toLowerCase(), typeLabel:'Built-In \u00b7 '+prettyEnum(b.type), builtIn:true,
+      params:[], code:null, varRefs:[], usedByTags:[], usedByTriggers:[], usedByVars:[], flags:[], refNames:[]});
+  });
+  (cv.variable||[]).forEach(function(v){
+    var fn=String(v.type||''), refs=new Set(), params=[], code=null;
+    (v.parameter||[]).forEach(function(p){
+      var val=pv(p); scanRefs(val, refs);
+      if(fn==='jsm' && p.key==='javascript'){ code={lang:'js', text:String(p.value||'')}; return; }
+      params.push({key:p.key||p.type, val:val});
+    });
+    if(v.formatValue){ params.push({key:'formatValue', val:JSON.stringify(v.formatValue)}); }
+    addVar({kind:'variable', id:'var-'+v.variableId, num:v.variableId, name:v.name, generatedName:false,
+      rawType:fn, typeLabel:varTypeLabel(fn), builtIn:false, params:params, code:code,
+      varRefs:[], usedByTags:[], usedByTriggers:[], usedByVars:[], flags:[],
+      refNames:Array.from(refs),
+      folder:folders[String(v.parentFolderId)]||null, notes:v.notes||null});
+  });
+
+  var TRG_SKIP={accountId:1,containerId:1,triggerId:1,name:1,type:1,fingerprint:1,filter:1,customEventFilter:1,autoEventFilter:1,parameter:1,parentFolderId:1,notes:1};
+  var trgById={};
+  (cv.trigger||[]).forEach(function(t){
+    var refs=new Set(), conditions=[], settings=[];
+    var mapCond=function(f){
+      var a0='',a1='',neg=false;
+      (f.parameter||[]).forEach(function(p){
+        if(p.key==='arg0') a0=pv(p);
+        else if(p.key==='arg1') a1=pv(p);
+        else if(p.key==='negate') neg=(String(p.value)==='true');
+      });
+      scanRefs(a0,refs); scanRefs(a1,refs);
+      conditions.push({left:a0, op:EXPORT_OPS[f.type]||prettyEnum(f.type), right:a1, negate:neg});
+    };
+    (t.filter||[]).forEach(mapCond);
+    (t.customEventFilter||[]).forEach(mapCond);
+    (t.autoEventFilter||[]).forEach(mapCond);
+    (t.parameter||[]).forEach(function(p){ var val=pv(p); scanRefs(val,refs); settings.push({key:p.key||p.type, val:val}); });
+    Object.keys(t).forEach(function(k){
+      if(TRG_SKIP[k]) return;
+      var val=t[k];
+      if(val && typeof val==='object' && (val.type||val.value!==undefined)){ val=pv(val); }
+      else if(typeof val==='object') return;
+      val=String(val); scanRefs(val,refs);
+      settings.push({key:k, val:val});
+    });
+    var e={kind:'trigger', id:'trg-'+t.triggerId, num:t.triggerId, name:t.name, generatedName:false,
+      typeLabel:EXPORT_TRIGGER_TYPES[t.type]||prettyEnum(t.type), eventName:null, conditions:conditions,
+      settings:settings, fires:[], blocks:[], varRefs:[], flags:[], builtIn:false,
+      refNames:Array.from(refs), folder:folders[String(t.parentFolderId)]||null, notes:t.notes||null};
+    trgById[String(t.triggerId)]=e; triggers.push(e);
+  });
+  var builtinTrg=function(id){
+    var key='trg-bi-'+id;
+    if(trgById[key]) return trgById[key];
+    var info=BUILTIN_TRIGGER_IDS[id]||{name:'Built-in trigger '+id, type:'Built-in'};
+    var e={kind:'trigger', id:key, num:id, name:info.name, generatedName:true, typeLabel:info.type,
+      eventName:null, conditions:[], settings:[], fires:[], blocks:[], varRefs:[], flags:[], builtIn:true, refNames:[]};
+    trgById[key]=e; triggers.push(e); return e;
+  };
+
+  (cv.tag||[]).forEach(function(t){
+    var fn=String(t.type||''), info=tagTypeInfo(fn), refs=new Set(), params=[], code=null;
+    (t.parameter||[]).forEach(function(p){
+      var val=pv(p); scanRefs(val,refs);
+      if(fn==='html' && p.key==='html'){ code={lang:'html', text:String(p.value||'')}; return; }
+      params.push({key:p.key||p.type, val:val});
+    });
+    var consent={status:'NOT_SET', types:[]};
+    if(t.consentSettings){
+      consent.status=t.consentSettings.consentStatus||'NOT_SET';
+      var ct=t.consentSettings.consentType;
+      if(ct && ct.list) consent.types=ct.list.map(function(x){return String(x.value||x);});
+    }
+    var fo={ONCE_PER_EVENT:'Once per event', ONCE_PER_LOAD:'Once per page', UNLIMITED:'Unlimited'}[t.tagFiringOption]||'Unlimited (default)';
+    var e={kind:'tag', id:'tag-'+t.tagId, num:t.tagId, name:t.name, generatedName:false,
+      rawType:fn, typeLabel:info.label, category:info.cat, system:info.system,
+      params:params, code:code, firing:[], blocking:[], consent:consent,
+      advanced:{firingOption:fo, priority:(t.priority?pv(t.priority):null),
+        setupNames:(t.setupTag||[]).map(function(s){return s.tagName;}),
+        teardownNames:(t.teardownTag||[]).map(function(s){return s.tagName;}),
+        setup:[], teardown:[], paused:!!t.paused, liveOnly:false,
+        notes:t.notes||null, folder:folders[String(t.parentFolderId)]||null, tagId:String(t.tagId)},
+      vendor:[], varRefs:[], flags:[], refNames:Array.from(refs)};
+    (t.firingTriggerId||[]).forEach(function(id){
+      var trg=trgById[String(id)]||builtinTrg(String(id));
+      pushU(e.firing, trg.id); pushU(trg.fires, e.id);
+    });
+    (t.blockingTriggerId||[]).forEach(function(id){
+      var trg=trgById[String(id)]||builtinTrg(String(id));
+      pushU(e.blocking, trg.id); pushU(trg.blocks, e.id);
+    });
+    tags.push(e);
+  });
+
+  /* resolve setup/teardown by tag name */
+  var tagByName={}; tags.forEach(function(t){ tagByName[t.name.toLowerCase()]=t; });
+  tags.forEach(function(t){
+    t.advanced.setup=(t.advanced.setupNames||[]).map(function(n){var f=tagByName[String(n).toLowerCase()];return {id:f?f.id:null,name:n};});
+    t.advanced.teardown=(t.advanced.teardownNames||[]).map(function(n){var f=tagByName[String(n).toLowerCase()];return {id:f?f.id:null,name:n};});
+  });
+
+  /* resolve {{name}} refs -> variable ids; ghost entities for undefined refs */
+  var ghosts={};
+  var resolveRefs=function(e){
+    (e.refNames||[]).forEach(function(n){
+      var v=varByName[n.toLowerCase()];
+      if(!v && n.charAt(0)==='_'){
+        /* implicit GTM system variables ({{_event}}, {{_triggers}}, …) are always defined at runtime */
+        v=addVar({kind:'variable', id:'var-sys-'+variables.length, num:'S', name:n, generatedName:false,
+          rawType:'system', typeLabel:'GTM system variable', builtIn:true,
+          params:[], code:null, varRefs:[], usedByTags:[], usedByTriggers:[], usedByVars:[], flags:[], refNames:[]});
+      }
+      if(!v){
+        if(!ghosts[n.toLowerCase()]){
+          v=addVar({kind:'variable', id:'var-ghost-'+Object.keys(ghosts).length, num:'?', name:n, generatedName:false,
+            rawType:'ghost', typeLabel:'Referenced but not defined', builtIn:false, ghost:true,
+            params:[], code:null, varRefs:[], usedByTags:[], usedByTriggers:[], usedByVars:[], flags:[], refNames:[]});
+          ghosts[n.toLowerCase()]=v;
+        } else { v=ghosts[n.toLowerCase()]; }
+      }
+      pushU(e.varRefs, v.id);
+    });
+    delete e.refNames;
+  };
+  tags.forEach(resolveRefs); triggers.forEach(resolveRefs); variables.slice().forEach(resolveRefs);
+
+  var fpDate=null;
+  if(cv.fingerprint){ var d=new Date(Number(cv.fingerprint)); if(!isNaN(d.getTime())) fpDate=d.toISOString().slice(0,10); }
+  return {source:'export', sourceLabel:'Container export JSON',
+    containerId:cont.publicId||providedId||'(unknown)',
+    version:String(cv.containerVersionId||cv.name||'draft'), containerName:cont.name||null, fingerprintDate:fpDate,
+    tags:tags, triggers:triggers, variables:variables, issues:[],
+    notes:['Parsed from a container export: names, folders, paused state and notes are exact as configured in the GTM workspace.']};
+}
+
+/* ---------- [5] cross-reference, vendors, stats ---------- */
+function crossReference(model){
+  var byId={};
+  model.tags.forEach(function(e){byId[e.id]=e;});
+  model.triggers.forEach(function(e){byId[e.id]=e;});
+  model.variables.forEach(function(e){byId[e.id]=e;});
+  model.byId=byId;
+  model.tags.forEach(function(t){ t.varRefs.forEach(function(v){ if(byId[v]) pushU(byId[v].usedByTags, t.id); }); });
+  model.triggers.forEach(function(t){ t.varRefs.forEach(function(v){ if(byId[v]) pushU(byId[v].usedByTriggers, t.id); }); });
+  model.variables.forEach(function(t){ t.varRefs.forEach(function(v){ if(byId[v] && v!==t.id) pushU(byId[v].usedByVars, t.id); }); });
+  var searchable=function(e){
+    var bits=[e.name, e.typeLabel, e.rawType||''];
+    (e.params||[]).forEach(function(p){bits.push(p.key, p.val);});
+    (e.conditions||[]).forEach(function(c){bits.push(c.left, c.op, c.right);});
+    if(e.code) bits.push(e.code.text);
+    (e.vendor||[]).forEach(function(v){bits.push(v);});
+    e.search=bits.join(' ').toLowerCase();
+  };
+  model.tags.forEach(searchable); model.triggers.forEach(searchable); model.variables.forEach(searchable);
+}
+function detectVendors(model){
+  model.tags.forEach(function(t){
+    if(t.system) return;
+    var hay=(t.code?t.code.text:'')+' '+t.params.map(function(p){return p.val;}).join(' ');
+    VENDORS.forEach(function(v){ if(v[0].test(hay)) pushU(t.vendor, v[1]); });
+  });
+}
+function computeStats(model){
+  var s={};
+  var real=model.tags.filter(function(t){return !t.system;});
+  s.tagCount=real.length;
+  s.systemCount=model.tags.length-real.length;
+  s.triggerCount=model.triggers.length;
+  s.variableCount=model.variables.filter(function(v){return !v.ghost;}).length;
+  s.typeBreakdown={};
+  real.forEach(function(t){ s.typeBreakdown[t.typeLabel]=(s.typeBreakdown[t.typeLabel]||0)+1; });
+  s.vendors={};
+  real.forEach(function(t){ t.vendor.forEach(function(v){ s.vendors[v]=(s.vendors[v]||0)+1; }); });
+  s.codeBytes=0; s.customHtmlCount=0;
+  model.tags.forEach(function(t){ if(t.code){ s.codeBytes+=t.code.text.length; if(t.rawType==='html') s.customHtmlCount++; } });
+  model.variables.forEach(function(v){ if(v.code) s.codeBytes+=v.code.text.length; });
+  s.consentDeclared=real.filter(function(t){return t.consent.status!=='NOT_SET';}).length;
+  s.pausedCount=real.filter(function(t){return t.advanced.paused;}).length;
+  var dl=new Set();
+  model.variables.forEach(function(v){
+    if(v.rawType==='v'){ (v.params||[]).forEach(function(p){ if(p.key==='name'&&p.val) dl.add(p.val); }); }
+  });
+  s.dlKeys=Array.from(dl).sort();
+  model.stats=s;
+}
+
+/* ---------- [6] audit engine ---------- */
+function addIssue(model, sev, ruleId, title, detail, rec, entities){
+  model.issues.push({id:ruleId, sev:sev, title:title, detail:detail, rec:rec, entities:entities||[]});
+  (entities||[]).forEach(function(id){ var e=model.byId[id]; if(e) e.flags.push({sev:sev, rule:ruleId, title:title}); });
+}
+function runAudit(model){
+  var real=model.tags.filter(function(t){return !t.system;});
+  var byId=model.byId;
+  var AD_VENDORS=['Meta Pixel','TikTok Pixel','LinkedIn Insight','Snap Pixel','Twitter/X Pixel','Microsoft UET','Criteo','Pinterest','Outbrain','Taboola','Awin','Impact','Google Ads','DoubleClick / Floodlight','Quantcast'];
+
+  var ua=real.filter(function(t){return t.rawType==='ua'||t.rawType==='gas';});
+  if(ua.length) addIssue(model,'high','deprecated-ua','Universal Analytics tags still present',
+    ua.length+' tag(s) use Universal Analytics, which stopped processing data on 1 July 2023 (360: July 2024). They add page weight and can mask broken measurement assumptions.',
+    'Remove or migrate these tags to GA4 (Google Tag + GA4 Event tags), then re-test conversions end to end.',
+    ua.map(function(t){return t.id;}));
+
+  var seqRef={};
+  model.tags.forEach(function(t){
+    (t.advanced.setup||[]).concat(t.advanced.teardown||[]).forEach(function(s){ if(s.id) seqRef[s.id]=1; });
+  });
+  var orphan=real.filter(function(t){return t.firing.length===0 && !t.advanced.paused && !seqRef[t.id];});
+  if(orphan.length) addIssue(model,'med','no-firing-trigger','Tags with no firing trigger',
+    orphan.length+' active tag(s) have no firing trigger and are not used in tag sequencing, so they can never fire.',
+    'Delete them, pause them, or attach the intended trigger. Dead tags inflate container size and audit noise.',
+    orphan.map(function(t){return t.id;}));
+
+  var ghosts=model.variables.filter(function(v){return v.ghost;});
+  if(ghosts.length) addIssue(model,'med','undefined-variable','References to undefined variables',
+    ghosts.length+' variable reference(s) (e.g. '+ghosts.slice(0,3).map(function(g){return '{{'+g.name+'}}';}).join(', ')+') do not match any defined or enabled built-in variable. At runtime these resolve to undefined.',
+    'Define the missing variables or enable the corresponding built-in variables; otherwise remove the references.',
+    ghosts.map(function(g){return g.id;}));
+
+  var paused=real.filter(function(t){return t.advanced.paused;});
+  if(paused.length) addIssue(model,'info','paused-tags','Paused tags in container',
+    paused.length+' tag(s) are paused. Fine as a temporary state; long-term paused tags usually mean unfinished cleanup.',
+    'Review whether each paused tag should be deleted or re-enabled.',
+    paused.map(function(t){return t.id;}));
+
+  var dw=real.filter(function(t){return t.code && /document\.write/i.test(t.code.text);});
+  if(dw.length) addIssue(model,'med','doc-write','document.write in custom HTML',
+    dw.length+' custom tag(s) call document.write. Browsers may block it on slow connections, and it can break rendering when fired after page load.',
+    'Replace with DOM insertion (createElement/appendChild) or the vendor\u2019s async snippet. Untick \u201csupport document.write\u201d once fixed.',
+    dw.map(function(t){return t.id;}));
+
+  var nested=real.filter(function(t){return t.vendor.indexOf('Nested GTM container')>=0;});
+  if(nested.length) addIssue(model,'med','nested-container','GTM container loaded inside a tag',
+    'A custom tag injects another GTM container. Nested containers create ungoverned tag surfaces, double-firing risk and consent blind spots.',
+    'Load additional containers via the page template with proper governance, or merge the tags into this container.',
+    nested.map(function(t){return t.id;}));
+
+  var hasAds=real.some(function(t){return t.rawType==='awct'||t.rawType==='sp';});
+  var hasLinker=real.some(function(t){return t.rawType==='gclidw';});
+  if(hasAds && !hasLinker) addIssue(model,'med','missing-conversion-linker','Google Ads tags without a Conversion Linker',
+    'Google Ads conversion/remarketing tags exist but no Conversion Linker tag was found. Without it, gclid capture in first-party cookies is unreliable (especially with cross-domain or ITP-affected traffic).',
+    'Add a Conversion Linker tag firing on All Pages (or Initialization) before the Ads tags.',
+    real.filter(function(t){return t.rawType==='awct'||t.rawType==='sp';}).map(function(t){return t.id;}));
+
+  var noConsent=real.filter(function(t){
+    if(t.consent.status!=='NOT_SET') return false;
+    if(MARKETING_TYPES.indexOf(t.rawType)>=0) return true;
+    if(t.rawType==='img') return true;
+    if(t.rawType==='html') return t.vendor.some(function(v){return AD_VENDORS.indexOf(v)>=0;});
+    return false;
+  });
+  if(noConsent.length) addIssue(model,'med','consent-unconfigured','Marketing tags without consent configuration',
+    noConsent.length+' advertising/pixel tag(s) have no additional consent configured. Unless your CMP blocks them another way, they may fire before (or without) consent \u2014 a GDPR/ePrivacy exposure.',
+    'Set \u201cRequire additional consent\u201d (ad_storage / ad_user_data as appropriate) or gate them via consent-aware triggers, and verify against your CMP\u2019s signal.',
+    noConsent.map(function(t){return t.id;}));
+
+  var evil=real.filter(function(t){return t.code && /\beval\s*\(|new\s+Function\s*\(/.test(t.code.text);});
+  var evilVars=model.variables.filter(function(v){return v.code && /\beval\s*\(|new\s+Function\s*\(/.test(v.code.text);});
+  if(evil.length+evilVars.length) addIssue(model,'high','eval-in-code','eval() / new Function() in custom code',
+    'Dynamic code evaluation found in custom HTML/JavaScript. This is a script-injection risk surface and often breaks under CSP.',
+    'Refactor to static code. If a vendor snippet requires it, isolate and document it explicitly.',
+    evil.map(function(t){return t.id;}).concat(evilVars.map(function(v){return v.id;})));
+
+  var unusedVars=model.variables.filter(function(v){
+    return !v.builtIn && !v.ghost && v.usedByTags.length===0 && v.usedByTriggers.length===0 && v.usedByVars.length===0;
+  });
+  if(unusedVars.length) addIssue(model,'low','unused-variables','Unused variables',
+    unusedVars.length+' variable(s) are not referenced by any tag, trigger or other variable.',
+    'Delete them to keep the workspace legible \u2014 or wire them up if they were meant to be used.',
+    unusedVars.map(function(v){return v.id;}));
+
+  var unusedTrg=model.triggers.filter(function(t){return !t.builtIn && t.fires.length===0 && t.blocks.length===0;});
+  if(unusedTrg.length) addIssue(model,'low','unused-triggers','Unused triggers',
+    unusedTrg.length+' trigger(s) fire or block nothing.',
+    'Remove them, or attach them to the tags they were built for.',
+    unusedTrg.map(function(t){return t.id;}));
+
+  var idMap={};
+  real.forEach(function(t){
+    var hay=t.params.map(function(p){return p.val;}).join(' ')+' '+(t.code?t.code.text:'');
+    var seen={};
+    var m=hay.match(/\b(?:AW|DC|UA|G|GTM)-[A-Z0-9]{4,12}\b/g)||[];
+    m.forEach(function(id){
+      if(seen[id]) return; seen[id]=1;
+      if(hay.indexOf('{{')>=0 && hay.indexOf(id)<0) return;
+      (idMap[id]=idMap[id]||[]).push(t.id);
+    });
+  });
+  var dupIds=Object.keys(idMap).filter(function(k){return idMap[k].length>=2;});
+  if(dupIds.length) addIssue(model,'low','hardcoded-ids','Hard-coded measurement IDs repeated across tags',
+    'IDs '+dupIds.slice(0,4).join(', ')+' appear literally in multiple tags.',
+    'Move repeated IDs into Constant variables so environment changes and typos are managed in one place.',
+    dupIds.reduce(function(acc,k){ idMap[k].forEach(function(id){pushU(acc,id);}); return acc; },[]));
+
+  var sigMap={};
+  real.forEach(function(t){
+    var sig=t.rawType+'|'+t.params.map(function(p){return p.key+'='+p.val;}).sort().join('&')+'|'+(t.code?t.code.text:'');
+    (sigMap[sig]=sigMap[sig]||[]).push(t.id);
+  });
+  var dupTags=Object.keys(sigMap).filter(function(k){return sigMap[k].length>=2;});
+  if(dupTags.length) addIssue(model,'med','duplicate-tags','Duplicate tag configurations',
+    'Two or more tags share an identical type and configuration \u2014 a common cause of double-counted conversions.',
+    'Consolidate to one tag; merge the triggers onto it.',
+    dupTags.reduce(function(acc,k){ sigMap[k].forEach(function(id){pushU(acc,id);}); return acc; },[]));
+
+  if(model.stats.customHtmlCount>10) addIssue(model,'info','heavy-custom-html','Heavy reliance on custom HTML',
+    model.stats.customHtmlCount+' custom HTML tags. Each is unaudited third-party code executing on your pages.',
+    'Migrate recurring patterns to sandboxed custom templates or native tag types where available.',[]);
+
+  if(model.stats.tagCount>60) addIssue(model,'info','tag-volume','Large container',
+    model.stats.tagCount+' active tags. Container size affects page weight and evaluation time on every event.',
+    'Archive stale tags and consider splitting by site/region if governance allows.',[]);
+
+  var order={high:0,med:1,low:2,info:3};
+  model.issues.sort(function(a,b){return order[a.sev]-order[b.sev];});
+  var score=100;
+  model.issues.forEach(function(i){ score-=({high:15,med:7,low:2,info:0})[i.sev]||0; });
+  score=Math.max(5,Math.min(100,score));
+  var grade=score>=90?'A':score>=75?'B':score>=60?'C':score>=40?'D':'E';
+  model.health={score:score, grade:grade};
+}
+
+/* ---------- pipeline ---------- */
+function postProcess(model){
+  crossReference(model);
+  detectVendors(model);
+  computeStats(model);
+  runAudit(model);
+  return model;
+}
+function parseAnyInput(text, providedId){
+  text=String(text||'').trim();
+  if(!text) throw new Error('Nothing to parse \u2014 the input is empty.');
+  var obj=null;
+  try{ obj=JSON.parse(text); }catch(e){ obj=null; }
+  if(!obj){
+    var extracted=extractDataObject(text);
+    if(!extracted) throw new Error('Could not locate a JSON data object. Paste the full gtm.js source or a container export JSON.');
+    try{ obj=JSON.parse(extracted); }
+    catch(e2){ throw new Error('Found a data object but it is not valid JSON ('+e2.message+'). Make sure the copy captured the complete file.'); }
+  }
+  var model;
+  if(obj.containerVersion || obj.exportFormatVersion) model=parseExport(obj, providedId);
+  else if(obj.tag && obj.trigger) model=parseExport(obj, providedId);
+  else if(obj.resource && obj.resource.tags) model=parseCompiled(obj.resource, text, providedId);
+  else if(obj.tags && obj.predicates) model=parseCompiled(obj, text, providedId);
+  else throw new Error('JSON parsed, but it does not look like gtm.js data or a GTM container export.');
+  return postProcess(model);
+}
+
+/* ---------- [7] demo container + self-test ---------- */
+var DEMO_RESOURCE={
+  version:'27',
+  macros:[
+    {'function':'__e'},
+    {'function':'__u','vtp_component':'PATH'},
+    {'function':'__u','vtp_component':'URL'},
+    {'function':'__v','vtp_name':'ecommerce.value','vtp_dataLayerVersion':2},
+    {'function':'__c','vtp_value':'G-DM0X9YZ12'},
+    {'function':'__jsm','vtp_javascript':'function(){\n  // page title, trimmed\n  var t = document.title;\n  return t ? t.trim() : undefined;\n}'},
+    {'function':'__v','vtp_name':'user_id','vtp_dataLayerVersion':2},
+    {'function':'__k','vtp_name':'_fbp'},
+    {'function':'__smm','vtp_input':['macro',0],'vtp_map':['list',['map','key','purchase','value','Purchase'],['map','key','add_to_cart','value','AddToCart']],'vtp_defaultValue':'PageView'}
+  ],
+  tags:[
+    {'function':'__googtag','vtp_tagId':['macro',4],'metadata':['map','name','Google Tag \u2014 GA4 base'],'tag_id':1},
+    {'function':'__gaawe','vtp_eventName':'purchase','vtp_measurementIdOverride':['macro',4],'vtp_eventSettingsTable':['list',['map','parameter','value','parameterValue',['macro',3]],['map','parameter','currency','parameterValue','EUR'],['map','parameter','mapped_event','parameterValue',['macro',8]]],'metadata':['map','name','GA4 \u2014 Purchase'],'once_per_event':true,'consent':['list','analytics_storage'],'tag_id':2},
+    {'function':'__awct','vtp_conversionId':'AW-880011223','vtp_conversionLabel':'aBcD3fGhIjk','vtp_conversionValue':['macro',3],'vtp_currencyCode':'EUR','vtp_orderId':['macro',6],'metadata':['map','name','Ads \u2014 Purchase Conversion'],'once_per_event':true,'priority':5,'consent':['list','ad_storage','ad_user_data'],'tag_id':3},
+    {'function':'__ua','vtp_trackType':'TRACK_PAGEVIEW','vtp_trackingId':'UA-4455667-1','metadata':['map','name','Legacy UA \u2014 Pageview'],'tag_id':4},
+    {'function':'__html','vtp_html':'<script>\n!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;\nn.push=n;n.loaded=!0;n.version=\u00272.0\u0027;n.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,\ndocument,\u0027script\u0027,\u0027https://connect.facebook.net/en_US/fbevents.js\u0027);\nfbq(\u0027init\u0027, \u00271122334455667\u0027);\nfbq(\u0027track\u0027, \u0027PageView\u0027);\ndocument.write(\u0027<img height="1" width="1" src="https://www.facebook.com/tr?id=1122334455667&ev=PageView&noscript=1"/>\u0027);\n<\/script>','vtp_supportDocumentWrite':true,'tag_id':14},
+    {'function':'__html','vtp_html':'<script>\n(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({\u0027gtm.start\u0027:new Date().getTime(),event:\u0027gtm.js\u0027});\nvar f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!=\u0027dataLayer\u0027?\u0027&l=\u0027+l:\u0027\u0027;\nj.async=true;j.src=\u0027https://www.googletagmanager.com/gtm.js?id=\u0027+i+dl;\nf.parentNode.insertBefore(j,f);})(window,document,\u0027script\u0027,\u0027dataLayer\u0027,\u0027GTM-OLD1111\u0027);\n<\/script>','tag_id':15},
+    {'function':'__sp','vtp_conversionId':'AW-880011223','vtp_customParamsFormat':'NONE','vtp_enableDynamicRemarketing':false,'metadata':['map','name','Ads \u2014 Remarketing'],'consent':['list','ad_storage'],'tag_id':16},
+    {'function':'__img','vtp_url':['template','https://pixel.example-dsp.com/px?ord=',['escape',['macro',3],12],'&uid=',['macro',6]],'vtp_cacheBusterQueryParam':'gtmcb','vtp_useCacheBuster':true,'tag_id':17}
+  ],
+  predicates:[
+    {'function':'_eq','arg0':['macro',0],'arg1':'gtm.js'},
+    {'function':'_cn','arg0':['macro',1],'arg1':'/checkout'},
+    {'function':'_eq','arg0':['macro',0],'arg1':'purchase'},
+    {'function':'_eq','arg0':['macro',0],'arg1':'gtm.dom'},
+    {'function':'_re','arg0':['macro',2],'arg1':'staging\\.|preview='},
+    {'function':'_sw','arg0':['macro',1],'arg1':'/account'}
+  ],
+  rules:[
+    [['if',0],['add',0,3]],
+    [['if',2],['add',1,2,6]],
+    [['if',0,1],['add',4]],
+    [['if',3],['add',5,7]],
+    [['if',0,4],['block',3,4]],
+    [['if',0,5],['block',6]]
+  ]
+};
+function buildDemoText(){
+  return '// Copyright 2012 Google Inc. All rights reserved.\n(function(){\nvar data = '
+    + JSON.stringify({resource:DEMO_RESOURCE, runtime:[], permissions:{}})
+    + ';\n/*\n\nProduct: GTM  Container: GTM-DEMO123\n*/\n})();';
+}
+var DEMO_EXPORT={
+  exportFormatVersion:2,
+  containerVersion:{
+    containerVersionId:'12', fingerprint:'1719400000000',
+    container:{publicId:'GTM-EXP0RT1', name:'Demo Export Container'},
+    builtInVariable:[{type:'PAGE_PATH', name:'Page Path'},{type:'EVENT', name:'Event'}],
+    variable:[
+      {variableId:'9', name:'GA4 ID', type:'c', parameter:[{type:'TEMPLATE', key:'value', value:'G-EXPORT999'}]},
+      {variableId:'10', name:'Order Value', type:'v', parameter:[{type:'TEMPLATE', key:'name', value:'ecommerce.value'},{type:'INTEGER', key:'dataLayerVersion', value:'2'}]}
+    ],
+    trigger:[
+      {triggerId:'5', name:'Purchase Event', type:'CUSTOM_EVENT',
+        customEventFilter:[{type:'EQUALS', parameter:[{type:'TEMPLATE',key:'arg0',value:'{{_event}}'},{type:'TEMPLATE',key:'arg1',value:'purchase'}]}],
+        filter:[{type:'CONTAINS', parameter:[{type:'TEMPLATE',key:'arg0',value:'{{Page Path}}'},{type:'TEMPLATE',key:'arg1',value:'/checkout'}]}]},
+      {triggerId:'6', name:'Old promo trigger', type:'PAGEVIEW',
+        filter:[{type:'EQUALS', parameter:[{type:'TEMPLATE',key:'arg0',value:'{{Page Path}}'},{type:'TEMPLATE',key:'arg1',value:'/promo-2019'}]}]}
+    ],
+    tag:[
+      {tagId:'21', name:'GA4 \u2014 Purchase', type:'gaawe', firingTriggerId:['5'],
+        parameter:[{type:'TEMPLATE',key:'eventName',value:'purchase'},{type:'TEMPLATE',key:'measurementIdOverride',value:'{{GA4 ID}}'},{type:'TEMPLATE',key:'value',value:'{{Order Value}}'},{type:'TEMPLATE',key:'userId',value:'{{User ID}}'}],
+        consentSettings:{consentStatus:'NEEDED', consentType:{type:'LIST', list:[{type:'TEMPLATE', value:'analytics_storage'}]}},
+        tagFiringOption:'ONCE_PER_EVENT'},
+      {tagId:'22', name:'Old promo pixel', type:'img', firingTriggerId:['2147479553'], paused:true,
+        parameter:[{type:'TEMPLATE',key:'url',value:'https://pixel.old-vendor.com/p?x=1'}]}
+    ]
+  }
+};
+function coreSelfTest(){
+  var out={};
+  var m=parseAnyInput(buildDemoText(), 'GTM-DEMO123');
+  out.compiled={tags:m.tags.length, triggers:m.triggers.length, variables:m.variables.length,
+    issues:m.issues.map(function(i){return i.id;}), health:m.health,
+    tagNames:m.tags.map(function(t){return t.name;}),
+    trigNames:m.triggers.map(function(t){return t.name+' [fires '+t.fires.length+' / blocks '+t.blocks.length+']';})};
+  if(m.tags.length!==8) throw new Error('demo: expected 8 tags, got '+m.tags.length);
+  if(m.triggers.length!==6) throw new Error('demo: expected 6 triggers, got '+m.triggers.length);
+  if(m.variables.length!==9) throw new Error('demo: expected 9 variables, got '+m.variables.length);
+  ['deprecated-ua','doc-write','nested-container','missing-conversion-linker','consent-unconfigured','hardcoded-ids','unused-variables'].forEach(function(r){
+    if(out.compiled.issues.indexOf(r)<0) throw new Error('demo: missing expected issue '+r);
+  });
+  var e=parseAnyInput(JSON.stringify(DEMO_EXPORT), null);
+  out.export={containerId:e.containerId, tags:e.tags.length, triggers:e.triggers.length,
+    variables:e.variables.length, issues:e.issues.map(function(i){return i.id;}),
+    ghost:e.variables.filter(function(v){return v.ghost;}).map(function(v){return v.name;})};
+  if(e.containerId!=='GTM-EXP0RT1') throw new Error('export: container id not read');
+  if(out.export.ghost.indexOf('User ID')<0) throw new Error('export: ghost variable not detected');
+  if(out.export.issues.indexOf('undefined-variable')<0) throw new Error('export: undefined-variable issue missing');
+  if(out.export.issues.indexOf('paused-tags')<0) throw new Error('export: paused-tags issue missing');
+  if(out.export.issues.indexOf('unused-triggers')<0) throw new Error('export: unused-triggers issue missing');
+  out.ok=true;
+  return out;
+}
+
+/* =====================================================================
+   [8] RENDERING (browser only from here down)
+   ===================================================================== */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function worstFlag(flags){
+  if(!flags||!flags.length) return null;
+  var order=['high','med','low','info'];
+  for(var i=0;i<order.length;i++){ if(flags.some(function(f){return f.sev===order[i];})) return order[i]; }
+  return null;
+}
+function findVarByName(model, name){
+  if(!model._vn){
+    model._vn={};
+    model.variables.forEach(function(v){ model._vn[v.name.toLowerCase()]=v; });
+  }
+  return model._vn[String(name).toLowerCase()]||null;
+}
+
+/* --- syntax highlighting --- */
+function highlightJS(src){
+  var re=/(\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`|\b\d+(?:\.\d+)?\b|\b(?:function|return|var|let|const|if|else|for|while|do|new|typeof|instanceof|try|catch|finally|throw|switch|case|break|continue|window|document|true|false|null|undefined|this|in|of)\b)/g;
+  var out='', last=0, m;
+  while((m=re.exec(src))!==null){
+    out+=esc(src.slice(last, m.index));
+    var t=m[0], cls;
+    if(t.slice(0,2)==='/*'||t.slice(0,2)==='//') cls='tok-cmt';
+    else if(t[0]==='"'||t[0]==="'"||t[0]==='`') cls='tok-str';
+    else if(/^\d/.test(t)) cls='tok-num';
+    else cls='tok-kw';
+    out+='<span class="'+cls+'">'+esc(t)+'</span>';
+    last=m.index+t.length;
+  }
+  return out+esc(src.slice(last));
+}
+function highlightMarkup(src){
+  var re=/(<!--[\s\S]*?-->|<\/?[a-zA-Z][^>]*>)/g, out='', last=0, m;
+  while((m=re.exec(src))!==null){
+    out+=esc(src.slice(last, m.index));
+    var t=m[0];
+    out+= t.slice(0,4)==='<!--' ? '<span class="tok-cmt">'+esc(t)+'</span>' : '<span class="tok-tag">'+esc(t)+'</span>';
+    last=m.index+t.length;
+  }
+  return out+esc(src.slice(last));
+}
+function highlightHTML(src){
+  var re=/(<script\b[^>]*>)([\s\S]*?)(<\/script\s*>)/gi, out='', last=0, m;
+  while((m=re.exec(src))!==null){
+    out+=highlightMarkup(src.slice(last, m.index));
+    out+='<span class="tok-tag">'+esc(m[1])+'</span>'+highlightJS(m[2])+'<span class="tok-tag">'+esc(m[3])+'</span>';
+    last=m.index+m[0].length;
+  }
+  return out+highlightMarkup(src.slice(last));
+}
+
+/* --- shared fragments --- */
+function chipHTML(e){
+  var cls='chip chip-'+e.kind+(e.ghost?' chip-ghost':'');
+  return '<button type="button" class="'+cls+'" data-nav="'+e.id+'" title="'+esc(e.typeLabel||'')+'"><span class="t">'+esc(e.name)+'</span></button>';
+}
+function chipsFor(ids, model){
+  var html=(ids||[]).map(function(id){ var e=model.byId[id]; return e?chipHTML(e):''; }).join('');
+  return html || '<span class="none">none</span>';
+}
+function wire(label, inner){
+  return '<div class="wire"><div class="wl">'+label+'</div><div class="wirechips">'+inner+'</div></div>';
+}
+function valWithRefs(val, model){
+  var s=String(val==null?'':val), re=/\{\{([^{}]+)\}\}/g, out='', last=0, m;
+  while((m=re.exec(s))!==null){
+    out+=esc(s.slice(last, m.index));
+    var e=findVarByName(model, m[1].trim());
+    if(e) out+='<button type="button" class="chip chip-variable'+(e.ghost?' chip-ghost':'')+'" data-nav="'+e.id+'" style="padding:0 6px;font-size:11px;vertical-align:baseline"><span class="t">'+esc(m[0])+'</span></button>';
+    else out+='<b>'+esc(m[0])+'</b>';
+    last=m.index+m[0].length;
+  }
+  return out+esc(s.slice(last));
+}
+function kvTable(rows, model){
+  if(!rows||!rows.length) return '<div style="font:12px var(--mono);color:var(--faint);font-style:italic">none</div>';
+  return '<table class="kv">'+rows.map(function(r){
+    return '<tr><td>'+esc(r.key)+'</td><td>'+(r.html!==undefined?r.html:valWithRefs(r.val, model))+'</td></tr>';
+  }).join('')+'</table>';
+}
+function condListHTML(conds, model){
+  if(!conds||!conds.length) return '<div style="font:12px var(--mono);color:var(--faint);font-style:italic">no filter conditions</div>';
+  return '<ul class="condlist">'+conds.map(function(c){
+    return '<li>'+(c.negate?'<span class="neg">NOT</span>':'')+valWithRefs(c.left, model)
+      +'<span class="op">'+esc(c.op)+'</span>'+valWithRefs(c.right, model)+'</li>';
+  }).join('')+'</ul>';
+}
+function consentBadge(c){
+  if(c.status==='NEEDED') return '<span class="sbadge s-ok" title="'+esc(CONSENT_HELP.NEEDED)+'">consent: '+esc(c.types.join(', ')||'\u2014')+'</span>';
+  if(c.status==='NOT_NEEDED') return '<span class="sbadge s-low" title="'+esc(CONSENT_HELP.NOT_NEEDED)+'">no additional consent</span>';
+  return '<span class="sbadge s-med" title="'+esc(CONSENT_HELP.NOT_SET)+'">consent not set</span>';
+}
+function flagBadges(flags){
+  if(!flags||!flags.length) return '';
+  return '<div class="flagline">'+flags.map(function(f){
+    return '<button type="button" class="sbadge s-'+f.sev+'" data-nav="audit" style="border:none" title="Open audit">'+esc(f.sev.toUpperCase()+' \u00b7 '+f.title)+'</button>';
+  }).join('')+'</div>';
+}
+function codeBlock(code, entId){
+  var body=code.lang==='js'?highlightJS(code.text):highlightHTML(code.text);
+  return '<div class="codewrap"><div class="codehead"><span>'+(code.lang==='js'?'custom javascript':'custom html')
+    +' \u00b7 '+code.text.length+' chars</span><button type="button" class="copy" data-copy="'+entId+'">copy</button></div>'
+    +'<pre class="code">'+body+'</pre></div>';
+}
+function sect(title, inner){ return '<div class="sect"><h4>'+title+'</h4>'+inner+'</div>'; }
+
+/* --- cards --- */
+function tagCard(t, model){
+  var worst=worstFlag(t.flags);
+  var head='<div class="idx">#'+esc(t.advanced.tagId||t.num)+'</div>'
+    +'<div class="nm">'+(t.generatedName?'<span class="gen">'+esc(t.name)+'</span>':esc(t.name))+'</div>'
+    +'<span class="tbadge cat-'+t.category+'">'+esc(t.typeLabel)+'</span>'
+    +t.vendor.map(function(v){return '<span class="tbadge cat-other">'+esc(v)+'</span>';}).join('')
+    +(t.advanced.paused?'<span class="sbadge s-paused">paused</span>':'')
+    +(t.system?'':consentBadge(t.consent))
+    +(worst?'<span class="sbadge s-'+worst+'">'+t.flags.length+' issue'+(t.flags.length>1?'s':'')+'</span>':'')
+    +'<span class="caret">\u25b6</span>';
+  var adv=[];
+  adv.push({key:'Tag firing option', val:t.advanced.firingOption});
+  if(t.advanced.priority!=null && t.advanced.priority!=='') adv.push({key:'Firing priority', val:t.advanced.priority});
+  if(t.advanced.setup && t.advanced.setup.length) adv.push({key:'Setup tag (fires before)', html:t.advanced.setup.map(function(s){var e=s.id?model.byId[s.id]:null;return e?chipHTML(e):esc(s.name||s.id);}).join(' ')});
+  if(t.advanced.teardown && t.advanced.teardown.length) adv.push({key:'Cleanup tag (fires after)', html:t.advanced.teardown.map(function(s){var e=s.id?model.byId[s.id]:null;return e?chipHTML(e):esc(s.name||s.id);}).join(' ')});
+  if(t.advanced.liveOnly) adv.push({key:'Live only', val:'true (does not fire in preview/debug)'});
+  if(t.advanced.folder) adv.push({key:'Folder', val:t.advanced.folder});
+  if(t.advanced.notes) adv.push({key:'Notes', val:t.advanced.notes});
+  var consentDetail='<div class="consentline">'+consentBadge(t.consent)+'</div>'
+    +'<div style="font-size:12.5px;color:var(--muted)">'+esc(CONSENT_HELP[t.consent.status]||'')+(t.consent.status==='NEEDED'?': <b>'+esc(t.consent.types.join(', '))+'</b>':'')+'</div>';
+  var body=wire('fires on', chipsFor(t.firing, model))
+    +(t.blocking.length?wire('blocked by', chipsFor(t.blocking, model)):'')
+    +wire('uses variables', chipsFor(t.varRefs, model))
+    +(t.system?'':sect('Consent settings', consentDetail))
+    +sect('Parameters', kvTable(t.params, model))
+    +sect('Advanced settings', kvTable(adv, model))
+    +(t.code?sect('Code', codeBlock(t.code, t.id)):'')
+    +flagBadges(t.flags);
+  return '<article class="card'+(t.system?' sys':'')+'" id="card-'+t.id+'" data-search="'+esc(t.search)+'">'
+    +'<header class="card-h" data-toggle="'+t.id+'">'+head+'</header><div class="card-b">'+body+'</div></article>';
+}
+function triggerCard(t, model){
+  var worst=worstFlag(t.flags);
+  var head='<div class="idx">T'+esc(t.num)+'</div>'
+    +'<div class="nm">'+(t.generatedName?'<span class="gen">'+esc(t.name)+'</span>':esc(t.name))+'</div>'
+    +'<span class="tbadge cat-custom">'+esc(t.typeLabel)+'</span>'
+    +(t.builtIn?'<span class="sbadge s-low">built-in</span>':'')
+    +(worst?'<span class="sbadge s-'+worst+'">'+t.flags.length+' issue'+(t.flags.length>1?'s':'')+'</span>':'')
+    +'<span class="caret">\u25b6</span>';
+  var body=sect('Conditions', condListHTML(t.conditions, model))
+    +(t.settings&&t.settings.length?sect('Trigger settings', kvTable(t.settings, model)):'')
+    +wire('fires tags', chipsFor(t.fires, model))
+    +(t.blocks.length?wire('blocks tags', chipsFor(t.blocks, model)):'')
+    +(t.varRefs.length?wire('uses variables', chipsFor(t.varRefs, model)):'')
+    +((t.folder||t.notes)?sect('Meta', kvTable([].concat(t.folder?[{key:'Folder',val:t.folder}]:[], t.notes?[{key:'Notes',val:t.notes}]:[]), model)):'')
+    +flagBadges(t.flags);
+  return '<article class="card" id="card-'+t.id+'" data-search="'+esc(t.search)+'">'
+    +'<header class="card-h" data-toggle="'+t.id+'">'+head+'</header><div class="card-b">'+body+'</div></article>';
+}
+function variableCard(v, model){
+  var worst=worstFlag(v.flags);
+  var usedTotal=v.usedByTags.length+v.usedByTriggers.length+v.usedByVars.length;
+  var head='<div class="idx">V'+esc(v.num)+'</div>'
+    +'<div class="nm">'+(v.generatedName?'<span class="gen">'+esc(v.name)+'</span>':esc(v.name))+'</div>'
+    +'<span class="tbadge cat-google">'+esc(v.typeLabel)+'</span>'
+    +(v.builtIn?'<span class="sbadge s-low">built-in</span>':'')
+    +(v.ghost?'<span class="sbadge s-high">undefined</span>':'')
+    +(!v.builtIn&&!v.ghost&&usedTotal===0?'<span class="sbadge s-low">unused</span>':'')
+    +(worst&&!v.ghost?'<span class="sbadge s-'+worst+'">'+v.flags.length+' issue'+(v.flags.length>1?'s':'')+'</span>':'')
+    +'<span class="caret">\u25b6</span>';
+  var body=(v.params&&v.params.length?sect('Configuration', kvTable(v.params, model)):'')
+    +(v.code?sect('Code', codeBlock(v.code, v.id)):'')
+    +wire('used by tags', chipsFor(v.usedByTags, model))
+    +wire('used by triggers', chipsFor(v.usedByTriggers, model))
+    +(v.usedByVars.length?wire('used by variables', chipsFor(v.usedByVars, model)):'')
+    +(v.varRefs.length?wire('uses variables', chipsFor(v.varRefs, model)):'')
+    +flagBadges(v.flags);
+  return '<article class="card" id="card-'+v.id+'" data-search="'+esc(v.search)+'">'
+    +'<header class="card-h" data-toggle="'+v.id+'">'+head+'</header><div class="card-b">'+body+'</div></article>';
+}
+
+/* --- views --- */
+var APP={model:null, tab:'overview'};
+function $(id){ return document.getElementById(id); }
+function renderOverview(m){
+  var s=m.stats, h=m.health;
+  var sevCount={high:0,med:0,low:0,info:0};
+  m.issues.forEach(function(i){sevCount[i.sev]++;});
+  var html='';
+  html+='<div class="ov-grid">'
+    +'<div class="tile"><div class="v">'+s.tagCount+'</div><div class="l">Tags'+(s.systemCount?' (+'+s.systemCount+' system)':'')+'</div></div>'
+    +'<div class="tile"><div class="v">'+s.triggerCount+'</div><div class="l">Triggers</div></div>'
+    +'<div class="tile"><div class="v">'+s.variableCount+'</div><div class="l">Variables</div></div>'
+    +'<div class="tile"><div class="v">'+(s.codeBytes/1024).toFixed(1)+'<small style="font-size:14px">KB</small></div><div class="l">Custom code</div></div>'
+    +'</div>';
+  html+='<div class="panelbox"><h3>Container health</h3><div class="healthbar">'
+    +'<div class="hscore">'+h.score+'<small>/100 \u00b7 grade '+h.grade+'</small></div>'
+    +'<div class="htext">'+m.issues.length+' finding(s): '
+    +'<span class="sbadge s-high">'+sevCount.high+' high</span> <span class="sbadge s-med">'+sevCount.med+' medium</span> '
+    +'<span class="sbadge s-low">'+sevCount.low+' low</span> <span class="sbadge s-info">'+sevCount.info+' info</span>'
+    +'<div style="margin-top:6px">Full detail and fixes in the <button type="button" class="chip" data-nav="audit"><span class="t">Audit tab</span></button></div></div>'
+    +'</div></div>';
+  var bd=Object.keys(s.typeBreakdown).map(function(k){return [k, s.typeBreakdown[k]];}).sort(function(a,b){return b[1]-a[1];});
+  var max=bd.length?bd[0][1]:1;
+  html+='<div class="two-col">';
+  html+='<div class="panelbox"><h3>Tag types</h3><div class="bars">'+bd.map(function(r){
+    return '<div class="bar-row"><div class="nm" title="'+esc(r[0])+'">'+esc(r[0])+'</div><div class="trk"><div class="fil" style="width:'+Math.round(r[1]/max*100)+'%"></div></div><div class="ct">'+r[1]+'</div></div>';
+  }).join('')+'</div></div>';
+  var vend=Object.keys(s.vendors).sort();
+  html+='<div class="panelbox"><h3>Detected vendors &amp; signals</h3>'
+    +(vend.length?'<div class="chipflow">'+vend.map(function(v){return '<span class="chip"><span class="t">'+esc(v)+' \u00d7'+s.vendors[v]+'</span></span>';}).join('')+'</div>':'<div style="font:12.5px var(--mono);color:var(--faint)">No third-party vendor signatures detected in tag code.</div>')
+    +'<div class="consentline" style="margin-top:14px"><b>'+s.consentDeclared+'</b> of <b>'+s.tagCount+'</b> tags declare consent settings'
+    +(s.pausedCount?' \u00b7 <b>'+s.pausedCount+'</b> paused':'')+'</div>'
+    +'</div>';
+  html+='</div>';
+  if(s.dlKeys.length){
+    html+='<div class="panelbox"><h3>Data layer keys referenced ('+s.dlKeys.length+')</h3><div class="chipflow">'
+      +s.dlKeys.map(function(k){return '<span class="chip chip-variable"><span class="t">'+esc(k)+'</span></span>';}).join('')+'</div></div>';
+  }
+  html+='<div class="panelbox"><h3>Parser notes</h3><ul class="notelist">'
+    +m.notes.map(function(n){return '<li>'+esc(n)+'</li>';}).join('')
+    +'<li>Source: '+esc(m.sourceLabel)+' \u00b7 version '+esc(m.version)
+    +(m.containerName?' \u00b7 '+esc(m.containerName):'')
+    +(m.fingerprintDate?' \u00b7 fingerprint '+esc(m.fingerprintDate):'')+'</li></ul></div>';
+  $('view-overview').innerHTML=html;
+}
+function renderTags(m){
+  var q=($('q').value||'').toLowerCase();
+  var typeF=$('tagTypeFilter').value;
+  var flagged=$('flaggedOnly').checked;
+  var showSys=$('showSystem').checked;
+  var list=m.tags.filter(function(t){
+    if(t.system&&!showSys) return false;
+    if(typeF&&t.typeLabel!==typeF) return false;
+    if(flagged&&!t.flags.length) return false;
+    if(q&&t.search.indexOf(q)<0) return false;
+    return true;
+  });
+  $('tagCount').textContent=list.length+' shown';
+  $('tagList').innerHTML=list.length?list.map(function(t){return tagCard(t,m);}).join(''):'<div class="empty">no tags match the current filters</div>';
+}
+function renderTriggers(m){
+  var q=($('q').value||'').toLowerCase();
+  var list=m.triggers.filter(function(t){return !q||t.search.indexOf(q)>=0;});
+  $('trgCount').textContent=list.length+' shown';
+  $('triggerList').innerHTML=list.length?list.map(function(t){return triggerCard(t,m);}).join(''):'<div class="empty">no triggers match the current filters</div>';
+}
+function renderVariables(m){
+  var q=($('q').value||'').toLowerCase();
+  var hideB=$('hideBuiltins').checked, unusedOnly=$('unusedOnly').checked;
+  var list=m.variables.filter(function(v){
+    if(hideB&&v.builtIn) return false;
+    if(unusedOnly&&(v.builtIn||v.ghost||v.usedByTags.length+v.usedByTriggers.length+v.usedByVars.length>0)) return false;
+    if(q&&v.search.indexOf(q)<0) return false;
+    return true;
+  });
+  $('varCount').textContent=list.length+' shown';
+  $('variableList').innerHTML=list.length?list.map(function(v){return variableCard(v,m);}).join(''):'<div class="empty">no variables match the current filters</div>';
+}
+function renderAudit(m){
+  var h=m.health;
+  var html='<div class="panelbox"><h3>Container health</h3><div class="healthbar">'
+    +'<div class="hscore">'+h.score+'<small>/100 \u00b7 '+h.grade+'</small></div>'
+    +'<div class="htext">Score starts at 100; each high finding costs 15, medium 7, low 2. Informational findings are free. This is a heuristic for triage, not a compliance verdict.</div></div></div>';
+  if(!m.issues.length){
+    html+='<div class="allclear">No findings. Clean container \u2014 nice work.</div>';
+  } else {
+    html+=m.issues.map(function(i){
+      return '<div class="issue '+i.sev+'"><div class="ih"><span class="sbadge s-'+i.sev+'">'+i.sev+'</span><b>'+esc(i.title)+'</b></div>'
+        +'<p>'+esc(i.detail)+'</p><div class="rec">'+esc(i.rec)+'</div>'
+        +(i.entities.length?'<div class="ents">'+i.entities.map(function(id){var e=m.byId[id];return e?chipHTML(e):'';}).join('')+'</div>':'')
+        +'</div>';
+    }).join('');
+  }
+  $('view-audit').innerHTML=html;
+}
+function updateStamp(m){
+  $('stampId').textContent=m.containerId;
+  $('stampMeta').innerHTML='<b>'+esc(m.sourceLabel)+'</b> \u00b7 v'+esc(m.version)
+    +(m.containerName?'<br>'+esc(m.containerName):'')
+    +'<br>'+m.stats.tagCount+' tags \u00b7 '+m.stats.triggerCount+' triggers \u00b7 '+m.stats.variableCount+' variables';
+  var seal=$('stampSeal');
+  seal.className='seal g'+m.health.grade;
+  seal.innerHTML='<b>'+m.health.grade+'</b><span>'+m.health.score+'/100</span>';
+  $('stamp').classList.add('on');
+  $('footStamp').textContent=m.containerId+' \u00b7 parsed '+new Date().toLocaleString();
+}
+function renderAll(){
+  var m=APP.model; if(!m) return;
+  var flaggedTags=m.tags.filter(function(t){return t.flags.length;}).length;
+  $('nTags').textContent=' '+m.stats.tagCount;
+  $('nTriggers').textContent=' '+m.stats.triggerCount;
+  $('nVariables').textContent=' '+m.stats.variableCount;
+  var sevBad=m.issues.some(function(i){return i.sev==='high'||i.sev==='med';});
+  var nI=$('nIssues'); nI.textContent=' '+m.issues.length; nI.className='n'+(sevBad?' bad':'');
+  $('sysCount').textContent=m.stats.systemCount;
+  var sel=$('tagTypeFilter');
+  var types={}; m.tags.forEach(function(t){types[t.typeLabel]=1;});
+  sel.innerHTML='<option value="">All tag types</option>'+Object.keys(types).sort().map(function(t){return '<option>'+esc(t)+'</option>';}).join('');
+  updateStamp(m);
+  renderOverview(m); renderTags(m); renderTriggers(m); renderVariables(m); renderAudit(m);
+  void flaggedTags;
+}
+function switchTab(name){
+  APP.tab=name;
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('on', b.getAttribute('data-tab')===name);});
+  document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('on', v.id==='view-'+name);});
+}
+function navigateTo(id){
+  if(id==='audit'){ switchTab('audit'); window.scrollTo({top:0}); return; }
+  var kind=id.indexOf('tag-')===0?'tags':id.indexOf('trg-')===0?'triggers':'variables';
+  switchTab(kind);
+  var card=document.getElementById('card-'+id);
+  if(!card){
+    $('q').value='';
+    if(kind==='tags'){ $('tagTypeFilter').value=''; $('flaggedOnly').checked=false; var e=APP.model.byId[id]; if(e&&e.system) $('showSystem').checked=true; renderTags(APP.model); }
+    else if(kind==='triggers'){ renderTriggers(APP.model); }
+    else { $('hideBuiltins').checked=false; $('unusedOnly').checked=false; renderVariables(APP.model); }
+    card=document.getElementById('card-'+id);
+  }
+  if(!card) return;
+  card.classList.add('open');
+  card.scrollIntoView({block:'center'});
+  card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+}
+
+/* =====================================================================
+   [9] EXPORTS
+   ===================================================================== */
+function consentText(c){
+  if(c.status==='NEEDED') return 'Required: '+(c.types.join(', ')||'\u2014');
+  if(c.status==='NOT_NEEDED') return 'No additional consent (declared)';
+  return 'Not set';
+}
+function downloadFile(name, mime, content){
+  var blob=new Blob([content], {type:mime});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url; a.download=name;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);}, 2000);
+}
+function buildReportHTML(m){
+  var e=esc, s=m.stats, h=[];
+  var nameOf=function(id){ var x=m.byId[id]; return x?x.name:id; };
+  var names=function(ids){ return (ids||[]).map(nameOf).join('; ')||'\u2014'; };
+  h.push('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>GTM Audit \u2014 '+e(m.containerId)+'</title><style>');
+  h.push('body{font:14px/1.55 system-ui,-apple-system,sans-serif;color:#161d2e;margin:0;background:#fff}');
+  h.push('.wrap{max-width:960px;margin:0 auto;padding:36px 30px 60px}');
+  h.push('h1{font-size:23px;margin:0}h2{font-size:14px;margin:36px 0 12px;text-transform:uppercase;letter-spacing:.12em;border-bottom:2px solid #161d2e;padding-bottom:6px}');
+  h.push('.meta{color:#5a6372;font:12.5px ui-monospace,Menlo,monospace;margin-top:7px}');
+  h.push('table{border-collapse:collapse;width:100%;font:12px ui-monospace,Menlo,monospace;margin:8px 0}');
+  h.push('td,th{border:1px solid #d9dde3;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f0f1f3;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em}');
+  h.push('.sev{font-weight:700;text-transform:uppercase;font-size:10px;padding:2px 7px;border-radius:2px;margin-right:8px}');
+  h.push('.high{background:#fbeae9;color:#b3261e}.med{background:#fdf3dc;color:#9a6700}.low{background:#eef0f2;color:#5f6672}.info{background:#eef2fd;color:#1f4fd8}');
+  h.push('.issue{border:1px solid #d9dde3;border-left:4px solid #999;padding:12px 15px;margin:10px 0;border-radius:3px;page-break-inside:avoid}');
+  h.push('.issue.high{border-left-color:#b3261e}.issue.med{border-left-color:#9a6700}.issue.low{border-left-color:#5f6672}.issue.info{border-left-color:#1f4fd8}');
+  h.push('.issue p{margin:6px 0;color:#3c4453;font-size:13px}');
+  h.push('.rec{background:#f7f7f5;border:1px dashed #c9cdd3;padding:8px 11px;margin-top:8px;font-size:13px}.rec b{letter-spacing:.1em;font-size:10px;color:#c85311;margin-right:8px}');
+  h.push('.score{font:700 42px ui-monospace,monospace}');
+  h.push('pre{background:#12151c;color:#d7dce6;padding:12px;font:11px/1.5 ui-monospace,monospace;overflow:auto;border-radius:3px}');
+  h.push('.ents{font:12px ui-monospace,monospace;color:#5a6372;margin-top:8px}');
+  h.push('</style></head><body><div class="wrap">');
+  h.push('<h1>GTM Container Audit \u2014 '+e(m.containerId)+'</h1>');
+  h.push('<div class="meta">'+e(m.sourceLabel)+' \u00b7 version '+e(m.version)
+    +(m.containerName?' \u00b7 '+e(m.containerName):'')
+    +' \u00b7 generated '+new Date().toISOString().slice(0,16).replace('T',' ')+'</div>');
+  var sc={high:0,med:0,low:0,info:0}; m.issues.forEach(function(i){sc[i.sev]++;});
+  h.push('<h2>Summary</h2>');
+  h.push('<div class="score">'+m.health.score+'/100 <span style="font-size:18px">grade '+m.health.grade+'</span></div>');
+  h.push('<p>'+s.tagCount+' tags ('+s.customHtmlCount+' custom HTML'+(s.systemCount?', +'+s.systemCount+' system listeners':'')+') \u00b7 '
+    +s.triggerCount+' triggers \u00b7 '+s.variableCount+' variables \u00b7 '+(s.codeBytes/1024).toFixed(1)+' KB custom code.</p>');
+  h.push('<p>Findings: <span class="sev high">'+sc.high+' high</span><span class="sev med">'+sc.med+' medium</span><span class="sev low">'+sc.low+' low</span><span class="sev info">'+sc.info+' info</span></p>');
+  h.push('<p>Consent settings declared on '+s.consentDeclared+' of '+s.tagCount+' tags. '
+    +(Object.keys(s.vendors).length?'Detected vendors: '+e(Object.keys(s.vendors).sort().join(', '))+'.':'No third-party vendor signatures detected.')+'</p>');
+  h.push('<h2>Findings &amp; recommendations ('+m.issues.length+')</h2>');
+  if(!m.issues.length) h.push('<p>No findings. Clean container.</p>');
+  m.issues.forEach(function(i){
+    h.push('<div class="issue '+i.sev+'"><span class="sev '+i.sev+'">'+i.sev+'</span><b>'+e(i.title)+'</b>');
+    h.push('<p>'+e(i.detail)+'</p><div class="rec"><b>FIX</b>'+e(i.rec)+'</div>');
+    if(i.entities.length) h.push('<div class="ents">Affected: '+e(i.entities.map(nameOf).join('; '))+'</div>');
+    h.push('</div>');
+  });
+  h.push('<h2>Tag inventory ('+s.tagCount+')</h2>');
+  h.push('<table><tr><th>Tag</th><th>Type</th><th>Fires on</th><th>Blocked by</th><th>Consent</th><th>Notes</th></tr>');
+  m.tags.filter(function(t){return !t.system;}).forEach(function(t){
+    var notes=[];
+    if(t.advanced.paused) notes.push('PAUSED');
+    if(t.vendor.length) notes.push(t.vendor.join(', '));
+    t.flags.forEach(function(f){notes.push(f.sev.toUpperCase()+': '+f.title);});
+    h.push('<tr><td>'+e(t.name)+'</td><td>'+e(t.typeLabel)+'</td><td>'+e(names(t.firing))+'</td><td>'+e(names(t.blocking))+'</td><td>'+e(consentText(t.consent))+'</td><td>'+e(notes.join(' \u00b7 ')||'\u2014')+'</td></tr>');
+  });
+  h.push('</table>');
+  h.push('<h2>Triggers ('+s.triggerCount+')</h2>');
+  h.push('<table><tr><th>Trigger</th><th>Type</th><th>Conditions</th><th>Fires</th><th>Blocks</th></tr>');
+  m.triggers.forEach(function(t){
+    var cond=t.conditions.map(function(c){return (c.negate?'NOT ':'')+c.left+' '+c.op+' '+c.right;}).join(' AND ')||'\u2014';
+    h.push('<tr><td>'+e(t.name)+'</td><td>'+e(t.typeLabel)+'</td><td>'+e(trunc(cond,180))+'</td><td>'+e(names(t.fires))+'</td><td>'+e(names(t.blocks))+'</td></tr>');
+  });
+  h.push('</table>');
+  h.push('<h2>Variables ('+s.variableCount+')</h2>');
+  h.push('<table><tr><th>Variable</th><th>Type</th><th>Used by</th></tr>');
+  m.variables.forEach(function(v){
+    var u=v.usedByTags.length+v.usedByTriggers.length+v.usedByVars.length;
+    h.push('<tr><td>'+e(v.name)+'</td><td>'+e(v.typeLabel)+'</td><td>'+(v.builtIn?'built-in':(u?u+' reference(s)':'unused'))+(v.ghost?' \u2014 UNDEFINED':'')+'</td></tr>');
+  });
+  h.push('</table>');
+  var coded=m.tags.filter(function(t){return t.code;});
+  if(coded.length){
+    h.push('<h2>Custom code appendix</h2>');
+    coded.forEach(function(t){
+      h.push('<p style="font:600 13px system-ui;margin:14px 0 4px">'+e(t.name)+'</p><pre>'+e(trunc(t.code.text,1400))+'</pre>');
+    });
+  }
+  h.push('<p class="meta">Generated by GTM Container Parser \u00b7 heuristic audit for triage, not a legal or compliance verdict.</p>');
+  h.push('</div></body></html>');
+  return h.join('\n');
+}
+function csvCell(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
+function tagsCSV(m){
+  var nameOf=function(id){ var x=m.byId[id]; return x?x.name:id; };
+  var rows=[['ID','Name','Type','Category','System','Vendors','Firing triggers','Blocking triggers','Variables used','Consent status','Consent types','Firing option','Priority','Paused','Issues']];
+  m.tags.forEach(function(t){
+    rows.push([t.advanced.tagId||t.num, t.name, t.typeLabel, t.category, t.system?'yes':'', t.vendor.join('; '),
+      t.firing.map(nameOf).join('; '), t.blocking.map(nameOf).join('; '), t.varRefs.map(nameOf).join('; '),
+      t.consent.status, t.consent.types.join('; '), t.advanced.firingOption, t.advanced.priority||'',
+      t.advanced.paused?'yes':'', t.flags.map(function(f){return f.sev+': '+f.title;}).join('; ')]);
+  });
+  return rows.map(function(r){return r.map(csvCell).join(',');}).join('\r\n');
+}
+function modelJSON(m){
+  var strip=function(e){ var o={}, k; for(k in e){ if(k==='search') continue; o[k]=e[k]; } return o; };
+  return JSON.stringify({
+    source:m.source, containerId:m.containerId, version:m.version, containerName:m.containerName,
+    fingerprintDate:m.fingerprintDate, health:m.health, stats:m.stats, notes:m.notes, issues:m.issues,
+    tags:m.tags.map(strip), triggers:m.triggers.map(strip), variables:m.variables.map(strip)
+  }, null, 2);
+}
+
+/* =====================================================================
+   [10] INPUT HANDLING + WIRING
+   ===================================================================== */
+function normalizeId(raw){
+  var v=String(raw||'').trim().toUpperCase();
+  if(!v) return null;
+  v=v.replace(/^GTM-?/,''); v='GTM-'+v;
+  return /^GTM-[A-Z0-9]{4,10}$/.test(v)?v:null;
+}
+function setStatus(el, msg, cls){ el.className='status'+(cls?' '+cls:''); el.textContent=msg; }
+function tryParse(text, id){
+  var errBox=$('parseError'); errBox.classList.remove('on');
+  try{
+    var model=parseAnyInput(text, id||normalizeId($('cidOptional').value)||null);
+    loadModel(model);
+    return true;
+  }catch(err){
+    errBox.innerHTML='<b>Parse failed:</b> '+esc(err.message)+'<br><span style="font-size:12.5px;color:var(--muted)">Expected either the full gtm.js source (contains <code>var data = {\u2026}</code>) or a container export JSON (contains <code>containerVersion</code>).</span>';
+    errBox.classList.add('on');
+    return false;
+  }
+}
+function loadModel(model){
+  APP.model=model; model._vn=null;
+  $('inputPanel').style.display='none';
+  $('workspace').classList.add('on');
+  renderAll();
+  switchTab('overview');
+  window.scrollTo({top:0, behavior:'auto'});
+}
+function fetchContainer(){
+  var id=normalizeId($('cidInput').value);
+  var st=$('fetchStatus'), hint=$('fetchHint'), btn=$('fetchBtn');
+  hint.classList.remove('on');
+  if(!id){ setStatus(st,'Enter a valid container ID, e.g. GTM-ABC1234.','err'); return; }
+  var url='https://www.googletagmanager.com/gtm.js?id='+id;
+  var hl=$('hintUrl'); hl.href=url; hl.textContent=url;
+  btn.disabled=true;
+  setStatus(st,'Fetching '+url+' \u2026');
+  var finish=function(text){
+    btn.disabled=false;
+    if(text && text.indexOf('resource')>=0){
+      setStatus(st,'Fetched '+(text.length/1024).toFixed(0)+' KB \u2014 parsed.','ok');
+      tryParse(text, id);
+    } else if(text!==null){
+      setStatus(st,'Got a response, but it does not look like gtm.js \u2014 the container may not exist or is not published.','err');
+      hint.classList.add('on');
+    } else {
+      setStatus(st,'Cross-origin fetch blocked by the browser (common; extensions like GTM Parser bypass this, plain pages cannot). Use the 30-second manual route:','err');
+      hint.classList.add('on');
+    }
+  };
+  fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+    .then(finish)
+    .catch(function(){
+      setStatus(st,'Direct fetch blocked \u2014 trying public CORS relay (only ever touches this public gtm.js URL)\u2026');
+      fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url))
+        .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+        .then(finish)
+        .catch(function(){ finish(null); });
+    });
+}
+function copyCode(entId, btn){
+  var ent=APP.model && APP.model.byId[entId];
+  if(!ent || !ent.code) return;
+  var done=function(ok){ btn.textContent=ok?'copied \u2713':'copy failed'; setTimeout(function(){btn.textContent='copy';},1400); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ent.code.text).then(function(){done(true);}, function(){done(false);});
+  } else {
+    try{
+      var ta=document.createElement('textarea'); ta.value=ent.code.text;
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+      document.body.removeChild(ta); done(true);
+    }catch(x){ done(false); }
+  }
+}
+function initApp(){
+  document.addEventListener('click', function(ev){
+    var t=ev.target.closest('[data-copy],[data-nav],[data-toggle],.tab');
+    if(!t) return;
+    if(t.hasAttribute('data-copy')){ copyCode(t.getAttribute('data-copy'), t); return; }
+    if(t.hasAttribute('data-nav')){ navigateTo(t.getAttribute('data-nav')); return; }
+    if(t.hasAttribute('data-toggle')){ var c=document.getElementById('card-'+t.getAttribute('data-toggle')); if(c) c.classList.toggle('open'); return; }
+    if(t.classList.contains('tab')) switchTab(t.getAttribute('data-tab'));
+  });
+  $('fetchBtn').addEventListener('click', fetchContainer);
+  $('cidInput').addEventListener('keydown', function(e){ if(e.key==='Enter') fetchContainer(); });
+  $('demoBtn').addEventListener('click', function(){ $('cidOptional').value=''; tryParse(buildDemoText(), 'GTM-DEMO123'); });
+  $('parseBtn').addEventListener('click', function(){ tryParse($('pasteInput').value, null); });
+  $('fileBtn').addEventListener('click', function(){ $('fileInput').click(); });
+  $('fileInput').addEventListener('change', function(){
+    var f=this.files && this.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){ $('pasteInput').value=String(rd.result); tryParse(String(rd.result), null); };
+    rd.readAsText(f);
+    this.value='';
+  });
+  $('resetBtn').addEventListener('click', function(){
+    $('workspace').classList.remove('on');
+    $('inputPanel').style.display='';
+    $('stamp').classList.remove('on');
+    $('footStamp').textContent='';
+    window.scrollTo({top:0});
+  });
+  $('q').addEventListener('input', function(){
+    if(!APP.model) return;
+    renderTags(APP.model); renderTriggers(APP.model); renderVariables(APP.model);
+  });
+  ['tagTypeFilter','flaggedOnly','showSystem'].forEach(function(id){
+    $(id).addEventListener('change', function(){ if(APP.model) renderTags(APP.model); });
+  });
+  ['hideBuiltins','unusedOnly'].forEach(function(id){
+    $(id).addEventListener('change', function(){ if(APP.model) renderVariables(APP.model); });
+  });
+  document.addEventListener('keydown', function(e){
+    var tag=(e.target.tagName||'').toLowerCase();
+    if(e.key==='/' && tag!=='input' && tag!=='textarea'){ e.preventDefault(); $('q').focus(); }
+    if(e.key==='Escape' && e.target===$('q')){ $('q').value=''; if(APP.model){renderTags(APP.model);renderTriggers(APP.model);renderVariables(APP.model);} }
+  });
+  $('exportReportBtn').addEventListener('click', function(){ if(APP.model) downloadFile(APP.model.containerId+'-audit.html','text/html;charset=utf-8', buildReportHTML(APP.model)); });
+  $('exportCsvBtn').addEventListener('click', function(){ if(APP.model) downloadFile(APP.model.containerId+'-tags.csv','text/csv;charset=utf-8', tagsCSV(APP.model)); });
+  $('exportJsonBtn').addEventListener('click', function(){ if(APP.model) downloadFile(APP.model.containerId+'-parsed.json','application/json;charset=utf-8', modelJSON(APP.model)); });
+  $('printBtn').addEventListener('click', function(){ window.print(); });
+}
+if(typeof document!=='undefined'){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', initApp);
+  else initApp();
+}
+</script>
+</body>
+</html>
